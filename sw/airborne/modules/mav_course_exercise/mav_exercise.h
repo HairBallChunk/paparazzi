@@ -21,6 +21,9 @@
 #ifndef PAPARAZZI_MAV_EXERCISE_H
 #define PAPARAZZI_MAV_EXERCISE_H
 
+// settings
+extern float oa_color_count_frac;
+
 extern void mav_exercise_init(void);
 extern void mav_exercise_periodic(void);
 

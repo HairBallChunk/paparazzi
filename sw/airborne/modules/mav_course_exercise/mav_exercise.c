@@ -38,20 +38,22 @@ enum navigation_state_t {
   SAFE,
   OBSTACLE_FOUND,
   OUT_OF_BOUNDS,
-  HOLD
+  HOLD,
+  TURN_20_DEG_AND_SEARCH
 };
 
 // define and initialise global variables
 float oa_color_count_frac = 0.18f;
 enum navigation_state_t navigation_state = SAFE;
 int32_t color_count = 0;               // orange color count from color filter for obstacle detection
+float divergence_value_exercise = 0; //divergence value needed for the obstacle avoidance algorithm
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
-float moveDistance = 2;                 // waypoint displacement [m]
+float moveDistance = .5;                 // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 
 
-// needed to receive output from a separate module running on a parallel process
+//` needed to receive output from a separate module running on a parallel process`
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
 #define ORANGE_AVOIDER_VISUAL_DETECTION_ID ABI_BROADCAST
 #endif
@@ -64,9 +66,25 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
   color_count = quality;
 }
 
+//` needed to receive output from a separate module running on a parallel process (Opticalflow)
+#ifndef OPTICAL_FLOW_ID
+#define OPTICAL_FLOW_ID ABI_BROADCAST
+#endif
+static abi_event optical_flow_ev;
+static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
+                            uint32_t __attribute__((unused)) stamp,
+                            int16_t __attribute__((unused)) flow_x,
+                            int16_t __attribute__((unused)) flow_y,
+                            int16_t __attribute__((unused)) flow_der_x,
+                            int16_t __attribute__((unused)) flow_der_y,
+                            float __attribute__((unused)) quality,
+                            float __attribute__((unused)) size_divergent) {
+    divergence_value_exercise = size_divergent;
+}
 void mav_exercise_init(void) {
   // bind our colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
+  AbiBindMsgOPTICAL_FLOW(FLOW_OPTICFLOW_ID, &optical_flow_ev, optical_flow_cb);
 }
 
 void mav_exercise_periodic(void) {
@@ -80,7 +98,7 @@ void mav_exercise_periodic(void) {
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
   PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
-
+  PRINT("OPTICAL FLOW VALUE : %f  \n", divergence_value_exercise);
   // update our safe confidence using color threshold
   if (color_count < color_count_threshold) {
     obstacle_free_confidence++;
@@ -108,7 +126,15 @@ void mav_exercise_periodic(void) {
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
 
-      navigation_state = HOLD;
+      navigation_state = TURN_20_DEG_AND_SEARCH;
+      break;
+    case TURN_20_DEG_AND_SEARCH:
+          //shift the heading of 20deg and check if the spot is open
+          increase_nav_heading(20.f);
+          // make sure we have a couple of good readings before declaring the way safe
+          if (obstacle_free_confidence >= 2){
+              navigation_state = SAFE;
+          }
       break;
     case OUT_OF_BOUNDS:
       // stop
