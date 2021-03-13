@@ -68,8 +68,8 @@ uint8_t cod_cb_min2 = 0;
 uint8_t cod_cb_max2 = 0;
 uint8_t cod_cr_min2 = 0;
 uint8_t cod_cr_max2 = 0;
-uint16_t filter_height2 = 0;
 uint16_t filter_width2 = 0;
+uint16_t filter_height2 = 0;
 
 bool cod_draw1 = false;
 bool cod_draw2 = false;
@@ -87,7 +87,7 @@ struct color_object_t global_filters[2];
 uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc, bool draw,
                               uint8_t lum_min, uint8_t lum_max,
                               uint8_t cb_min, uint8_t cb_max,
-                              uint8_t cr_min, uint8_t cr_max);
+                              uint8_t cr_min, uint8_t cr_max, uint16_t filter_height, uint16_t filter_width);
 
 /*
  * object_detector
@@ -100,7 +100,7 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   uint8_t lum_min, lum_max;
   uint8_t cb_min, cb_max;
   uint8_t cr_min, cr_max;
-  uint16_t filter_1_length, filter_2_length, filter_1_width, filter_2_width;
+  uint16_t filter_height, filter_width;
   bool draw;
 
   switch (filter){
@@ -133,7 +133,7 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   int32_t x_c, y_c;
 
   // Filter and find centroid
-  uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, lum_min, lum_max, cb_min, cb_max, cr_min, cr_max);
+  uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, lum_min, lum_max, cb_min, cb_max, cr_min, cr_max, filter_height, filter_width);
   VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
   VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
         hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
@@ -218,16 +218,21 @@ void color_object_detector_init(void)
 uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc, bool draw,
                               uint8_t lum_min, uint8_t lum_max,
                               uint8_t cb_min, uint8_t cb_max,
-                              uint8_t cr_min, uint8_t cr_max)
+                              uint8_t cr_min, uint8_t cr_max, uint16_t filter_height, uint16_t filter_width)
 {
   uint32_t cnt = 0;
   uint32_t tot_x = 0;
   uint32_t tot_y = 0;
   uint8_t *buffer = img->buf;
-  // Go through all the pixels
-  uint16_t max_y_filter =
-  for (uint16_t y = 0; y < img->h; y++) {
-    for (uint16_t x = 0; x < img->w; x ++) {
+  // Select only the right pixels defined by the filter_height and filter_width variables
+  uint16_t img_width_original = img->w;
+  uint16_t img_height_original = img->h;
+  uint16_t min_y = round((img_height_original-filter_height)/2.f);
+  uint16_t min_x = round((img_width_original-filter_width)/2.f);
+  uint16_t max_y = min_y + filter_height;
+  uint16_t max_x = min_x + filter_width;
+  for (uint16_t y = min_y; y < max_y; y++) {
+    for (uint16_t x = min_x; x < max_x; x ++) {
       // Check if the color is inside the specified values
       uint8_t *yp, *up, *vp;
       if (x % 2 == 0) {
@@ -256,8 +261,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
     }
   }
   if (cnt > 0) {
-    *p_xc = (int32_t)roundf(tot_x / ((float) cnt) - img->w * 0.5f);
-    *p_yc = (int32_t)roundf(img->h * 0.5f - tot_y / ((float) cnt));
+    *p_xc = (int32_t)roundf(tot_x / ((float) cnt) - filter_width * 0.5f)+min_x;
+    *p_yc = (int32_t)roundf(filter_height * 0.5f - tot_y / ((float) cnt))+min_y;
   } else {
     *p_xc = 0;
     *p_yc = 0;

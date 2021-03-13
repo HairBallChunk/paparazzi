@@ -38,13 +38,16 @@ extern uint8_t cod_cb_min1;
 extern uint8_t cod_cb_max1;
 extern uint8_t cod_cr_min1;
 extern uint8_t cod_cr_max1;
-
+extern uint16_t filter_height1;
+extern uint16_t filter_width1;
 extern uint8_t cod_lum_min2;
 extern uint8_t cod_lum_max2;
 extern uint8_t cod_cb_min2;
 extern uint8_t cod_cb_max2;
 extern uint8_t cod_cr_min2;
 extern uint8_t cod_cr_max2;
+extern uint16_t filter_height2;
+extern uint16_t filter_width2;
 
 extern bool cod_draw1;
 extern bool cod_draw2;
