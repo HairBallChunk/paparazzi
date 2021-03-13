@@ -48,7 +48,7 @@ enum navigation_state_t navigation_state = SAFE;
 int32_t color_count = 0;               // orange color count from color filter for obstacle detection
 float divergence_value_exercise = 0; //divergence value needed for the obstacle avoidance algorithm
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
-float moveDistance = .5;                 // waypoint displacement [m]
+float moveDistance = 2.f;                 // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 
@@ -98,7 +98,9 @@ void mav_exercise_periodic(void) {
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
   PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
-  PRINT("OPTICAL FLOW VALUE : %f  \n", divergence_value_exercise);
+  if(divergence_value_exercise>=0.02){
+      PRINT("OPTICAL FLOW VALUE : %f  \n", divergence_value_exercise);
+  }
   // update our safe confidence using color threshold
   if (color_count < color_count_threshold) {
     obstacle_free_confidence++;
