@@ -43,12 +43,13 @@ enum navigation_state_t {
 };
 
 // define and initialise global variables
-float oa_color_count_frac = 0.18f;
 enum navigation_state_t navigation_state = SAFE;
 int32_t color_count = 0;               // orange color count from color filter for obstacle detection
+int16_t filter_height = 0;
+int16_t filter_width = 0;
 float divergence_value_exercise = 0; //divergence value needed for the obstacle avoidance algorithm
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
-float moveDistance = 2.f;                 // waypoint displacement [m]
+float moveDistance = .5;                 // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 
@@ -64,6 +65,8 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
                                int16_t __attribute__((unused)) pixel_height,
                                int32_t quality, int16_t __attribute__((unused)) extra) {
   color_count = quality;
+  filter_height = pixel_height;
+  filter_width = pixel_width;
 }
 
 //` needed to receive output from a separate module running on a parallel process (Opticalflow)
@@ -95,7 +98,7 @@ void mav_exercise_periodic(void) {
 
   // compute current color thresholds
   // front_camera defined in airframe xml, with the video_capture module
-  int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
+  int32_t color_count_threshold = object_detector_sensitivity * filter_height * filter_width;
 
   PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
   if(divergence_value_exercise>=0.02){
@@ -131,8 +134,8 @@ void mav_exercise_periodic(void) {
       navigation_state = TURN_20_DEG_AND_SEARCH;
       break;
     case TURN_20_DEG_AND_SEARCH:
-          //shift the heading of 20deg and check if the spot is open
-          increase_nav_heading(20.f);
+          //shift the heading of 10deg and check if the spot is open
+          increase_nav_heading(10.f);
           // make sure we have a couple of good readings before declaring the way safe
           if (obstacle_free_confidence >= 2){
               navigation_state = SAFE;

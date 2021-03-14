@@ -22,7 +22,7 @@
 #define PAPARAZZI_MAV_EXERCISE_H
 
 // settings
-extern float oa_color_count_frac;
+extern float object_detector_sensitivity;
 
 extern void mav_exercise_init(void);
 extern void mav_exercise_periodic(void);

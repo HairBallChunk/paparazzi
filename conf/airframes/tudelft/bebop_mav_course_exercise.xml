@@ -67,6 +67,7 @@
     </module>
     <!-- CUSTOM MODULE EXERCISE -->
     <module name="mav_course_exercise">
+      <define name="COLOR_FILTER_SENSITIVITY" value="0.1"/>
     </module>
     <!-- CUSTOM MODULE OPTICAL FLOW-->
     <module name="cv_opticflow">

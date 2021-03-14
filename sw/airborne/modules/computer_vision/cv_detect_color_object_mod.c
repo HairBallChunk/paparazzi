@@ -53,6 +53,7 @@ static pthread_mutex_t mutex;
 #endif
 
 // Filter Settings
+float object_detector_sensitivity = 0.18;
 uint8_t cod_lum_min1 = 0;
 uint8_t cod_lum_max1 = 0;
 uint8_t cod_cb_min1 = 0;
@@ -79,6 +80,8 @@ struct color_object_t {
   int32_t x_c;
   int32_t y_c;
   uint32_t color_count;
+  uint16_t filter_height;
+  uint16_t filter_width;
   bool updated;
 };
 struct color_object_t global_filters[2];
@@ -142,6 +145,8 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   global_filters[filter-1].color_count = count;
   global_filters[filter-1].x_c = x_c;
   global_filters[filter-1].y_c = y_c;
+  global_filters[filter-1].filter_height = filter_height;
+  global_filters[filter-1].filter_width = filter_width;
   global_filters[filter-1].updated = true;
   pthread_mutex_unlock(&mutex);
 
@@ -227,8 +232,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
   // Select only the right pixels defined by the filter_height and filter_width variables
   uint16_t img_width_original = img->w;
   uint16_t img_height_original = img->h;
-  uint16_t min_y = round((img_height_original-filter_height)/2.f);
-  uint16_t min_x = round((img_width_original-filter_width)/2.f);
+  uint16_t min_y = round((img_height_original-filter_height) * 0.5f );
+  uint16_t min_x = round((img_width_original-filter_width) * 0.5f );
   uint16_t max_y = min_y + filter_height;
   uint16_t max_x = min_x + filter_width;
   for (uint16_t y = min_y; y < max_y; y++) {
@@ -261,8 +266,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
     }
   }
   if (cnt > 0) {
-    *p_xc = (int32_t)roundf(tot_x / ((float) cnt) - filter_width * 0.5f)+min_x;
-    *p_yc = (int32_t)roundf(filter_height * 0.5f - tot_y / ((float) cnt))+min_y;
+    *p_xc = (int32_t)roundf(tot_x / ((float) cnt) - filter_width * 0.5f + min_x);
+    *p_yc = (int32_t)roundf(filter_height * 0.5f - tot_y / ((float) cnt) + min_y);
   } else {
     *p_xc = 0;
     *p_yc = 0;
@@ -279,12 +284,12 @@ void color_object_detector_periodic(void)
 
   if(local_filters[0].updated){
     AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c, local_filters[0].y_c,
-        0, 0, local_filters[0].color_count, 0);
+        local_filters[0].filter_width, local_filters[0].filter_height, local_filters[0].color_count, 0);
     local_filters[0].updated = false;
   }
   if(local_filters[1].updated){
     AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].x_c, local_filters[1].y_c,
-        0, 0, local_filters[1].color_count, 1);
+        local_filters[0].filter_width, local_filters[0].filter_height, local_filters[1].color_count, 1);
     local_filters[1].updated = false;
   }
 }
