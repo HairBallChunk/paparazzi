@@ -9,6 +9,7 @@ from os import path, getenv
 # file is a reasonable substitute
 PPRZ_HOME = getenv("PAPARAZZI_HOME", path.normpath(path.join(path.dirname(path.abspath(__file__)), '../../../')))
 sys.path.append(PPRZ_HOME + "/var/lib/python") # pprzlink
+print(PPRZ_HOME)
 
 from pprzlink.ivy import IvyMessagesInterface
 from pprzlink.message import PprzMessage

@@ -18,22 +18,26 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "mav_exercise.h"
-#include "subsystems/abi.h"
-#include "firmwares/rotorcraft/navigation.h"
-#include "state.h"
-#include "autopilot_static.h"
+// when more than one file that has same name, inculde should be specified from ~/paparazzi/sw/airborne
+
+#include "mav_exercise.h"		// header with external settings and functions
+#include "subsystems/abi.h"		// header with abi messages
+#include "firmwares/rotorcraft/navigation.h"		// header with navigational functions (global ref frame)
+#include "state.h"		// header with drone's state (body ref)
+#include "autopilot_static.h"		// in firmwares/rotorcraft/, handle autopilot start-up, arm motors, ...
 #include <stdio.h>
 
-#define NAV_C // needed to get the nav functions like Inside...
-#include "generated/flight_plan.h"
+#define NAV_C // needed to get the nav functions like Inside... / needed to get the generated flight plan
+#include "generated/flight_plan.h"		// in var/aircrafts/bebop_exercise/nps
 
-#define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+#define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)	// sends formatted output to a stream
 
-uint8_t increase_nav_heading(float incrementDegrees);
+// navigational functions that are defined in this file (init)
+uint8_t increase_nav_heading(float incrementDegrees);		
 uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
 uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor);
 
+//  navigational states that are defined in this file (init)
 enum navigation_state_t {
   SAFE,
   OBSTACLE_FOUND,
