@@ -83,9 +83,9 @@ bool cod_draw2 = false;
 
 //Burhan filter settings:
 uint8_t Green_percentage[520];
-uint8_t R_green_low = 65, G_green_low = 75, B_green_low = 65;
-uint8_t R_green_hi = 95, G_green_hi = 150, B_green_hi = 95;
-uint8_t gray_threshold = 55;
+uint8_t R_green_low = 60, G_green_low = 70, B_green_low = 0; // Lower = [65,20,5]
+uint8_t R_green_hi = 100, G_green_hi = 200, B_green_hi = 45; // Higher = [95,255,95]
+uint8_t gray_threshold = 20;
 
 // define global variables
 struct color_object_t {
@@ -155,8 +155,13 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   // Filter and find centroid
   uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, lum_min, lum_max, cb_min, cb_max, cr_min, cr_max, filter_height, filter_width);
   //Using the Burhan filter
-  Burhan_filter(img, &Green_percentage, draw, R_green_low, G_green_low, B_green_low,
-                  R_green_hi, G_green_hi, B_green_hi, gray_threshold);
+//  Burhan_filter(img, &Green_percentage, draw, R_green_low, G_green_low, B_green_low,
+//                  R_green_hi, G_green_hi, B_green_hi, gray_threshold);
+
+
+    Burhan_filter(img, &Green_percentage, draw, R_green_low, G_green_low, B_green_low,
+                  R_green_hi, G_green_hi, B_green_hi, filter_height);
+  
 
   VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
   VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
@@ -338,7 +343,9 @@ void Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
             if ( (pixel_b >= B_green_low) && (pixel_b <= B_green_hi) &&
                  (pixel_g >= G_green_low ) && (pixel_g <= G_green_hi ) &&
                  (pixel_r >= R_green_low ) && (pixel_r <= R_green_hi )) {
-
+//            if ( (*up >= 0) && (*up <= 120) &&
+//                 (*vp >= 0 ) && (*vp <= 120 ) &&
+//                 (*yp >= 50 ) && (*yp <= 200 )) {
                 //IMPLEMENTING THE BGR TO GRAYSCALE
                 pixel_value_local_gray = (int) 0.3f * pixel_r + 0.59f * pixel_g + 0.11f * pixel_b;
             }
