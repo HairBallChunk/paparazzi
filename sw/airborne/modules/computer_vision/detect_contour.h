@@ -27,6 +27,7 @@
 #define DETECT_CONTOUR_H
 
 extern void detect_contour_init(void);
+extern void detect_contour_periodic(void);
 
 #endif
 

@@ -25,12 +25,40 @@
 
 #include "modules/computer_vision/cv.h"
 #include "modules/computer_vision/detect_contour.h"
+
 #include "modules/computer_vision/opencv_contour.h"
+#include <stdio.h>
+#include <stdbool.h>
+#include <math.h>
+
+
+#include <stdio.h>
+#include "modules/wedgebug/wedgebug.h"
+#include "modules/wedgebug/wedgebug_opencv.h"
+#include "modules/computer_vision/cv.h" // Required for the "cv_add_to_device" function
+#include "modules/computer_vision/lib/vision/image.h"// For image-related structures
+#include "pthread.h"
+#include <stdint.h> // Needed for common types like uint8_t
+#include "state.h"
+#include "math/pprz_algebra_float.h"// Needed for vector operations, Euclidean distance, FloatVect3 and FloatRMat
+#include "math/pprz_algebra.h"// Needed for vector operations (simple subtraction)
+#include "math/pprz_geodetic_float.h"// Needed for NedCoor_f
+#include "generated/flight_plan.h" // Needed for WP (waypoint) functions and WP IDs (as defined in "ralphthesis2020_stereo_cyberzoo.xml")
+#include "firmwares/rotorcraft/autopilot_guided.h" // Needed for guidance functions such as "autopilot_guided_goto_ned" and "guidance_h_set_guided_heading"
+#include <math.h> // needed for basic math functions
+#include "autopilot.h" // Needed to set states (GUIDED vs NAV)
+#include <time.h> // Needed to measure time
+
+
+
+
+
 
 #ifndef DETECT_CONTOUR_FPS
-#define DETECT_CONTOUR_FPS 0       ///< Default FPS (zero means run at camera fps)
+#define DETECT_CONTOUR_FPS 4       ///< Default FPS (zero means run at camera fps)
 #endif
 PRINT_CONFIG_VAR(DETECT_CONTOUR_FPS)
+#define PRINT(string,...) fprintf(stderr, "[object_detector->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
 // Function
 struct image_t *contour_func(struct image_t *img);
@@ -40,10 +68,14 @@ struct image_t *contour_func(struct image_t *img)
   if (img->type == IMAGE_YUV422) {
     // Call OpenCV (C++ from paparazzi C function)
     find_contour((char *) img->buf, img->w, img->h);
+
   }
   return img;
 }
-
+void detect_contour_periodic(void)
+{
+    PRINT("We are in");
+}
 void detect_contour_init(void)
 {
   cv_add_to_device(&DETECT_CONTOUR_CAMERA, contour_func, DETECT_CONTOUR_FPS);

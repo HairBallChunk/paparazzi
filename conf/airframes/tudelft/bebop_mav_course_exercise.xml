@@ -66,6 +66,15 @@
       <define name="COLOR_OBJECT_DETECTOR_DRAW1" value="1"/>
     </module>
     <!-- CUSTOM MODULE EXERCISE -->
+<!--    <module name="cv_detect_contour">-->
+<!--      <define name="DETECT_CONTOUR_CAMERA" value="front_camera"/>-->
+<!--      <define name="DETECT_CONTOUR_FPS" value="4"/>-->
+<!--    </module>-->
+<!--    <module name="cv_opencvdemo">-->
+<!--      <define name="OPENCVDEMO_CAMERA" value="front_camera"/>-->
+<!--      <define name="OPENCVDEMO_FPS" value="5"/>-->
+<!--    </module>-->
+
     <module name="mav_course_exercise">
       <define name="COLOR_FILTER_SENSITIVITY" value="0.1"/>
     </module>

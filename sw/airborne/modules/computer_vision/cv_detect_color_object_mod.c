@@ -25,16 +25,22 @@
  * if you are over the defined object or not
  */
 
+//#include "modules/computer_vision/cv.h"
+//#include "modules/computer_vision/detect_contour.h"
+//#include "modules/computer_vision/opencv_contour.h"
+
 // Own header
 #include "modules/computer_vision/cv_detect_color_object_mod.h"
-#include "modules/computer_vision/cv.h"
+//#include "modules/computer_vision/cv.h"
 #include "subsystems/abi.h"
 #include "std.h"
-
+#include "opencv_example.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <math.h>
 #include "pthread.h"
+#include "stdlib.h"
+
 
 #define PRINT(string,...) fprintf(stderr, "[object_detector->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 #if OBJECT_DETECTOR_VERBOSE
@@ -75,6 +81,12 @@ uint16_t filter_height2 = 0;
 bool cod_draw1 = false;
 bool cod_draw2 = false;
 
+//Burhan filter settings:
+uint8_t Green_percentage[520];
+uint8_t R_green_low = 65, G_green_low = 75, B_green_low = 65;
+uint8_t R_green_hi = 95, G_green_hi = 150, B_green_hi = 95;
+uint8_t gray_threshold = 55;
+
 // define global variables
 struct color_object_t {
   int32_t x_c;
@@ -92,6 +104,10 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
                               uint8_t cb_min, uint8_t cb_max,
                               uint8_t cr_min, uint8_t cr_max, uint16_t filter_height, uint16_t filter_width);
 
+void Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
+                   uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
+                   uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold);
+
 /*
  * object_detector
  * @param img - input image to process
@@ -105,6 +121,7 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   uint8_t cr_min, cr_max;
   uint16_t filter_height, filter_width;
   bool draw;
+
 
   switch (filter){
     case 1:
@@ -137,6 +154,10 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
 
   // Filter and find centroid
   uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, lum_min, lum_max, cb_min, cb_max, cr_min, cr_max, filter_height, filter_width);
+  //Using the Burhan filter
+  Burhan_filter(img, &Green_percentage, draw, R_green_low, G_green_low, B_green_low,
+                  R_green_hi, G_green_hi, B_green_hi, gray_threshold);
+
   VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
   VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
         hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
@@ -229,6 +250,11 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
   uint32_t tot_x = 0;
   uint32_t tot_y = 0;
   uint8_t *buffer = img->buf;
+
+//  opencv_example( &buffer, img->w , img->h );
+
+//    find_contour((char *) img->buf, img->w, img->h);
+
   // Select only the right pixels defined by the filter_height and filter_width variables
   uint16_t img_width_original = img->w;
   uint16_t img_height_original = img->h;
@@ -253,7 +279,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
         vp = &buffer[y * 2 * img->w + 2 * x];      // V
         yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
       }
-      if ( (*yp >= lum_min) && (*yp <= lum_max) &&
+
+        if ( (*yp >= lum_min) && (*yp <= lum_max) &&
            (*up >= cb_min ) && (*up <= cb_max ) &&
            (*vp >= cr_min ) && (*vp <= cr_max )) {
         cnt ++;
@@ -273,6 +300,63 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
     *p_yc = 0;
   }
   return cnt;
+}
+
+void Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
+                  uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
+                  uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold)
+{
+    uint32_t cnt = 0;
+    uint8_t *buffer = img->buf;
+
+    for (uint16_t x = 0; x < img->w; x ++) {
+        cnt = 0;
+        for (uint16_t y = 0; y < img->h; y++) {
+            // Check if the color is inside the specified values
+            uint8_t *yp, *up, *vp;
+            uint8_t pixel_b, pixel_g, pixel_r, pixel_value_local, pixel_value_local_gray;
+            if (x % 2 == 0) {
+                // Even x
+                up = &buffer[y * 2 * img->w + 2 * x];      // U
+                yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
+                vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
+                //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
+            } else {
+                // Uneven x
+                up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
+                //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
+                vp = &buffer[y * 2 * img->w + 2 * x];      // V
+                yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
+            }
+            //Transpose YUV in RGB
+
+            pixel_b = (int) fmin(255.f , 1.164f * ( *yp - 16) + 2.018f * ( *up - 128));
+            pixel_g = (int) fmin(255.f , 1.164f * ( *yp - 16) - 0.813f * ( *vp - 128) - 0.391f * ( *up - 128));
+            pixel_r = (int) fmin(255.f , 1.164f * ( *yp - 16) + 1.596f * ( *vp - 128));
+
+            //CREATE THE BITWISE_AND TOGETHER WITH THE INRANGE FCN
+            if ( (pixel_b >= B_green_low) && (pixel_b <= B_green_hi) &&
+                 (pixel_g >= G_green_low ) && (pixel_g <= G_green_hi ) &&
+                 (pixel_r >= R_green_low ) && (pixel_r <= R_green_hi )) {
+
+                //IMPLEMENTING THE BGR TO GRAYSCALE
+                pixel_value_local_gray = (int) 0.3f * pixel_r + 0.59f * pixel_g + 0.11f * pixel_b;
+            }
+            else{
+                pixel_value_local_gray = 0;
+            }
+            //IMPLEMENTING THE THRESHOLD FCN
+            if(pixel_value_local_gray >= gray_threshold){
+                cnt++;
+                if(draw){
+                    *yp = 255; // make pixel brighter in image
+                }
+            }
+        }
+        Green_percentage++;
+        int value_to_print = (int) round(cnt/img->h * 100);
+        *Green_percentage = (int) round(cnt/img->h * 100);
+    }
 }
 
 void color_object_detector_periodic(void)

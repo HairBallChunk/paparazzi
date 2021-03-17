@@ -31,6 +31,7 @@
 #include "cv.h"
 #include "rt_priority.h"
 
+#define PRINT(string,...) fprintf(stderr, "[CV->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
 void cv_attach_listener(struct video_config_t *device, struct video_listener *new_listener);
 int8_t cv_async_function(struct cv_async *async, struct image_t *img);
@@ -47,7 +48,7 @@ struct video_listener *cv_add_to_device(struct video_config_t *device, cv_functi
 {
   // Create a new video listener
   struct video_listener *new_listener = malloc(sizeof(struct video_listener));
-
+    PRINT("WE ARE IN");
   // Assign function to listener
   new_listener->active = true;
   new_listener->func = func;

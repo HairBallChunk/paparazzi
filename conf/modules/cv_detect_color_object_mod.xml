@@ -67,6 +67,16 @@
   <periodic fun="color_object_detector_periodic()" freq="50"/>
   <makefile target="ap|nps">
     <file name="cv_detect_color_object_mod.c"/>
+<!--      <file name="detect_contour.c"/>-->
+<!--    <file name="opencv_example.cpp"/>-->
+<!--      <flag name="CXXFLAGS" value="I$(PAPARAZZI_SRC)/sw/ext/opencv_bebop/install_pc/include"/>-->
+<!--      <flag name="LDFLAGS" value="L$(PAPARAZZI_SRC)/sw/ext/opencv_bebop/install_pc/lib" />-->
+<!--      <flag name="LDFLAGS" value="L$(PAPARAZZI_HOME)/sw/ext/opencv_bebop/install_pc/share/OpenCV/3rdparty/lib" />-->
+<!--      <flag name="LDFLAGS" value="lstdc++" />-->
+<!--      <flag name="LDFLAGS" value="ldl" />-->
+<!--      <flag name="LDFLAGS" value="lm" />-->
+<!--      <flag name="LDFLAGS" value="lpthread" />-->
+<!--      <flag name="LDFLAGS" value="lrt" />-->
   </makefile>
 </module>
 
