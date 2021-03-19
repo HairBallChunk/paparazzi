@@ -40,7 +40,8 @@
 #include <math.h>
 #include "pthread.h"
 #include "stdlib.h"
-
+#include "subsystems/datalink/downlink.h"
+float debug_values[4];
 
 #define PRINT(string,...) fprintf(stderr, "[object_detector->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 #if OBJECT_DETECTOR_VERBOSE
@@ -86,9 +87,12 @@ uint8_t Green_percentage[520];
 uint8_t R_green_low = 60, G_green_low = 70, B_green_low = 0; // Lower = [65,20,5]
 uint8_t R_green_hi = 100, G_green_hi = 200, B_green_hi = 45; // Higher = [95,255,95]
 uint8_t gray_threshold = 20;
+uint8_t thresh_lower = 0, thresh_upper = 120;
+uint16_t STEP = 1;
+uint16_t MAX_image_height = 120;
 
 // define global variables
-struct color_object_t {
+struct color_object_t{
   int32_t x_c;
   int32_t y_c;
   uint32_t color_count;
@@ -108,6 +112,7 @@ void Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
                    uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
                    uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold);
 
+//uint8_t find_continous_zeros(uint8_t *bin_array, uint8_t bin_array_length, uint8_t thresh_lower,uint8_t thresh_upper);
 /*
  * object_detector
  * @param img - input image to process
@@ -311,12 +316,19 @@ void Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
                   uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
                   uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold)
 {
+    uint16_t size = 0;
+    uint16_t ones_count = 0;
+    uint16_t wrong_zeros = 0;
+    uint8_t flag_start = 0, flag_zero = 0;
+    uint8_t end_loop = 120;
+
     uint32_t cnt = 0;
     uint8_t *buffer = img->buf;
-
-    for (uint16_t x = 0; x < img->w; x ++) {
+    uint16_t next_y_value = 0;
+    uint16_t bin_array[img->w];
+    for (uint16_t y = 0; y < img->h; y++) {
         cnt = 0;
-        for (uint16_t y = 0; y < img->h; y++) {
+        for (uint16_t x = 0; x < img->w; x ++) {
             // Check if the color is inside the specified values
             uint8_t *yp, *up, *vp;
             uint8_t pixel_b, pixel_g, pixel_r, pixel_value_local, pixel_value_local_gray;
@@ -354,17 +366,96 @@ void Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
             }
             //IMPLEMENTING THE THRESHOLD FCN
             if(pixel_value_local_gray >= gray_threshold){
-                cnt++;
+                cnt ++;
+                bin_array[x] = 1;
                 if(draw){
                     *yp = 255; // make pixel brighter in image
                 }
             }
+            else {
+                bin_array[x] = 0;
+            }
+//            fprintf(stderr,"I AM HERE %d \n",bin_array[y]);
         }
         Green_percentage++;
-        int value_to_print = (int) round(cnt/img->h * 100);
-        *Green_percentage = (int) round(cnt/img->h * 100);
+        if(y == next_y_value) {
+            wrong_zeros = 0;
+            ones_count = 0;
+            int count2;
+//            uint16_t size = find_continous_zeros( &bin_array, bin_array_length, thresh_lower, thresh_upper);
+            for (int k = MAX_image_height; k < img->w ; k ++) {
+                uint8_t *yp;
+                count2 = img->w - k;
+                if (bin_array[count2] == 0) {
+                    if (ones_count > 0) {
+                        wrong_zeros ++;
+                        if (count2 % 2 == 0) {
+                            // Even x
+                            yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
+                        } else {
+                            // Uneven x
+                            yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
+                        }
+                        *yp = 255;
+                    }
+                }
+                else if (bin_array[count2] == 1) {
+                    ones_count ++;
+                }
+            }
+            next_y_value += STEP;
+        }
+        //fprintf(stderr,"I AM HERE %d \n",wrong_zeros);
+//
+//        debug_values[0] = wrong_zeros;
+//        DOWNLINK_SEND_PAYLOAD_FLOAT(DefaultChannel, DefaultDevice, 8, debug_values);
+
     }
+
 }
+//
+//uint16_t find_continous_zeros(uint8_t *bin_array,uint8_t bin_array_length, uint8_t thresh_lower,uint8_t thresh_upper){
+//    uint8_t *bin_array_local;
+//    bin_array_local = &bin_array;
+//    uint8_t *bin_array_evaluate;
+//    uint16_t size = 0;
+//    uint16_t count = 0;
+//    uint8_t flag_start = 0;
+//    uint8_t flag_zero = 0;
+//
+//    for (uint8_t i = 0; i < bin_array_length - 2 ; i++) {
+//        bin_array_evaluate = &bin_array_local[i];
+//        if(*bin_array_evaluate == 0 && flag_start==0 ){
+//            if(i==0){
+//                flag_zero = 1;
+//                continue;
+//            }
+//            flag_start = 1;
+//            count++;
+//        }
+//        else if(*bin_array_evaluate == 0 && flag_start == 1 ){
+//            if(flag_zero == 1){
+//                continue;
+//            }
+//            count++;
+//
+//            if(i == bin_array_length - 1){
+//                if( thresh_lower <= count && count <= thresh_upper){
+//                    size = size + count;
+//                }
+//            }
+//        }
+//        else if(*bin_array_evaluate == 1 && flag_start == 1){
+//            flag_zero = 0;
+//            if(thresh_lower <= count && count <= thresh_upper){
+//                size = size + count;
+//                flag_start = 0;
+//                count = 0;
+//            }
+//        }
+//    }
+//    return(size-1);
+//}
 
 void color_object_detector_periodic(void)
 {
