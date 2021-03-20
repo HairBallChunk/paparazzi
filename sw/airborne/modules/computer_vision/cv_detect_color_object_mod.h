@@ -49,6 +49,17 @@ extern uint8_t cod_cr_max2;
 extern uint16_t filter_height2;
 extern uint16_t filter_width2;
 
+//Burhan filter settings
+extern uint8_t R_green_low, G_green_low, B_green_low;
+extern uint8_t R_green_hi, G_green_hi, B_green_hi;
+extern uint8_t gray_threshold;
+extern uint16_t STEP;
+extern uint8_t filter_height_cut;
+extern uint8_t thresh_lower;
+extern uint8_t sections;
+extern float window_scale;
+extern uint8_t print_weights;
+
 extern bool cod_draw1;
 extern bool cod_draw2;
 

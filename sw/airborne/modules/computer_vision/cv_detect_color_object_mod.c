@@ -170,7 +170,7 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
     uint32_t max_idx = Burhan_filter(img, draw, R_green_low, G_green_low, B_green_low,
                   R_green_hi, G_green_hi, B_green_hi, filter_height, thresh_lower, filter_height_cut, sections,
                   window_scale, print_weights);
-    
+
   VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
   VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
         hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
