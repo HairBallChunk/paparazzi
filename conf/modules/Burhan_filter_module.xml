@@ -1,6 +1,6 @@
 <!DOCTYPE module SYSTEM "module.dtd">
 
-<module name="cv_detect_color_object_mod" dir="computer_vision">
+<module name="Burhan_filter_module" dir="computer_vision">
   <doc>
     <description>Burhan filter detector
     Detects the cleared path using the Burhan filter. Optionally draws on image.
@@ -31,13 +31,13 @@
   <depends>video_thread</depends>
 
   <header>
-    <file name="cv_detect_color_object_mod.h"/>
+    <file name="Burhan_filter_module_fcn.h"/>
   </header>
 
   <init fun="burhan_filter_init()"/>
   <periodic fun="burhan_filter_periodic()" freq="50"/>
   <makefile target="ap|nps">
-    <file name="cv_detect_color_object_mod.c"/>
+    <file name="Burhan_filter_module_fcn.c"/>
   </makefile>
 </module>
 
