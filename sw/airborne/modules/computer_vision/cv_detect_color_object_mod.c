@@ -330,10 +330,13 @@ uint16_t Burhan_filter(struct image_t *img, bool draw,
     float Section_value[sections], weight = 0;
     uint16_t idx_section = 0, section_count = 0;
     uint16_t section_value = 0, storage_value = 0, max_idx = 0;
-    section_value = (int) img->h/STEP/sections;
 
-    fprintf(stderr,"HEADING VALUES:  ");
-    for (uint16_t y = 0; y < img->h; y++) {
+    section_value = (int) img->h/STEP/sections;
+    max_idx = -1;
+    Section_value[-1] = 0;
+
+    fprintf(stderr,"WEIGHT FOR EACH SECTION :  ");
+    for (uint16_t y = 0; y < img->h; y += STEP) {
         uint8_t cnt = 0;
         uint16_t green_count;
         for (uint16_t x = 0; x < filter_height_cut ; x ++) {
@@ -418,23 +421,24 @@ uint16_t Burhan_filter(struct image_t *img, bool draw,
             //REFINE THE FILTER INTO BIGGER CELLS
             storage_value += wrong_zeros + cnt;
             section_count++;
-            if(section_count == section_value ){
+            if(section_count == section_value){
                 //Adding the weight
                 weight = 1.f - (fabs(idx_section + 1 - ceil(sections*0.5f))/ceil(sections*0.5f)) * window_scale;
                 Section_value[idx_section] = weight * storage_value/(section_value*(img->w - filter_height_cut));
                 fprintf(stderr," %f ",Section_value[idx_section]);
                 storage_value = 0;
                 section_count = 0;
-                if(Section_value[idx_section] > Section_value[idx_section - 1]){
-                    max_idx = idx_section + 1;
+                if(Section_value[idx_section] > Section_value[max_idx] ){
+                    max_idx = idx_section;
                 }
                 idx_section++;
             }
         }
 
     }
+
     fprintf(stderr,".\n ");
-    return(max_idx);
+    return(max_idx + 1);
 }
 
 
