@@ -31,24 +31,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// Module settings
-extern uint8_t cod_lum_min1;
-extern uint8_t cod_lum_max1;
-extern uint8_t cod_cb_min1;
-extern uint8_t cod_cb_max1;
-extern uint8_t cod_cr_min1;
-extern uint8_t cod_cr_max1;
-extern uint16_t filter_height1;
-extern uint16_t filter_width1;
-extern uint8_t cod_lum_min2;
-extern uint8_t cod_lum_max2;
-extern uint8_t cod_cb_min2;
-extern uint8_t cod_cb_max2;
-extern uint8_t cod_cr_min2;
-extern uint8_t cod_cr_max2;
-extern uint16_t filter_height2;
-extern uint16_t filter_width2;
-
 //Burhan filter settings
 extern uint8_t R_green_low, G_green_low, B_green_low;
 extern uint8_t R_green_hi, G_green_hi, B_green_hi;
@@ -59,12 +41,11 @@ extern uint8_t thresh_lower;
 extern uint8_t sections;
 extern float window_scale;
 extern uint8_t print_weights;
+extern uint8_t draw_on_img;
 
-extern bool cod_draw1;
-extern bool cod_draw2;
 
 // Module functions
-extern void color_object_detector_init(void);
-extern void color_object_detector_periodic(void);
+extern void burhan_filter_init(void);
+extern void burhan_filter_periodic(void);
 
 #endif /* COLOR_OBJECT_DETECTOR_CV_H */
