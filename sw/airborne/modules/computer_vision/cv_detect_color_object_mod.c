@@ -59,6 +59,12 @@ static pthread_mutex_t mutex;
 #define COLOR_OBJECT_DETECTOR_FPS2 0 ///< Default FPS (zero means run at camera fps)
 #endif
 
+// ###########################################################################################
+#ifndef COLOR_OBJECT_DETECTOR_FPS3
+#define COLOR_OBJECT_DETECTOR_FPS3 0 ///< Default FPS (zero means run at camera fps)
+#endif
+// ###########################################################################################
+
 // Filter Settings
 float object_detector_sensitivity = 0.18;
 uint8_t cod_lum_min1 = 0;
@@ -82,6 +88,8 @@ uint16_t filter_height2 = 0;
 bool cod_draw1 = false;
 bool cod_draw2 = false;
 
+// ###########################################################################################
+
 //Burhan filter settings:
 uint8_t Green_percentage[520];
 uint8_t R_green_low = 60, G_green_low = 70, B_green_low = 0; // Lower = [65,20,5]
@@ -90,6 +98,8 @@ uint8_t gray_threshold = 20;
 uint8_t thresh_lower = 0, thresh_upper = 120;
 uint16_t STEP = 1;
 uint16_t MAX_image_height = 120;
+
+// ###########################################################################################
 
 // define global variables
 struct color_object_t{
@@ -102,17 +112,37 @@ struct color_object_t{
 };
 struct color_object_t global_filters[2];
 
+// ###########################################################################################
+struct offset_detected{
+  uint32_t offset;
+  bool updated;
+};
+struct offset_detected offset_filter[1];
+// ###########################################################################################
+
 // Function
+// this one returns count
 uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc, bool draw,
                               uint8_t lum_min, uint8_t lum_max,
                               uint8_t cb_min, uint8_t cb_max,
                               uint8_t cr_min, uint8_t cr_max, uint16_t filter_height, uint16_t filter_width);
+							  
+// ###########################################################################################
+// we want this to be a variable called px_offset probably uint32_t like above to sore px_offset instead of count
+
+/*
+ * uint32_t Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
+                   uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
+                   uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold);
+ * */
 
 void Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
                    uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
                    uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold);
 
 //uint8_t find_continous_zeros(uint8_t *bin_array, uint8_t bin_array_length, uint8_t thresh_lower,uint8_t thresh_upper);
+
+// ###########################################################################################
 /*
  * object_detector
  * @param img - input image to process
@@ -155,24 +185,48 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
       return img;
   };
 
+// ###########################################################################################
+// this detector specifies the filtered image such that there exists a pointer that can be bound to the current frame  
+static struct image_t *offset_detector(struct image_t *img)
+{
+  uint8_t R_green_low, G_green_low, B_green_low;
+  uint8_t R_green_hi, G_green_hi, B_green_hi; 
+  uint16_t filter_height;
+  bool draw;
+}
+// ###########################################################################################
+
   int32_t x_c, y_c;
 
   // Filter and find centroid
   uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, lum_min, lum_max, cb_min, cb_max, cr_min, cr_max, filter_height, filter_width);
+  
+  // ###########################################################################################
   //Using the Burhan filter
 //  Burhan_filter(img, &Green_percentage, draw, R_green_low, G_green_low, B_green_low,
 //                  R_green_hi, G_green_hi, B_green_hi, gray_threshold);
-
-
-    Burhan_filter(img, &Green_percentage, draw, R_green_low, G_green_low, B_green_low,
+/*
+ * uint32_t px_offset = Burhan_filter(img, &Green_percentage, draw, R_green_low, G_green_low, B_green_low,
                   R_green_hi, G_green_hi, B_green_hi, filter_height);
-  
+ * */
+
+Burhan_filter(img, &Green_percentage, draw, R_green_low, G_green_low, B_green_low,
+                  R_green_hi, G_green_hi, B_green_hi, filter_height);
+// ###########################################################################################
 
   VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
   VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
         hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
 
+// ###########################################################################################
+VERBOSE_PRINT("px_offset: %d", px_offset);
+// ###########################################################################################
+
   pthread_mutex_lock(&mutex);
+  // ###########################################################################################
+  // offset_filter[0].offset = px_offset;  
+  // offset_filter[0].updated = true;  
+  // ###########################################################################################
   global_filters[filter-1].color_count = count;
   global_filters[filter-1].x_c = x_c;
   global_filters[filter-1].y_c = y_c;
@@ -196,8 +250,19 @@ struct image_t *object_detector2(struct image_t *img)
   return object_detector(img, 2);
 }
 
+// ###########################################################################################
+struct image_t *offset_detector1(struct image_t *img);
+struct image_t *offset_detector1(struct image_t *img)
+{
+  return offset_detector(img);
+}
+// ###########################################################################################
+
 void color_object_detector_init(void)
 {
+  // ###########################################################################################
+  //memset(offset_filter, 0, sizeof(struct offset_detected));
+  // ###########################################################################################
   memset(global_filters, 0, 2*sizeof(struct color_object_t));
   pthread_mutex_init(&mutex, NULL);
 #ifdef COLOR_OBJECT_DETECTOR_CAMERA1
@@ -231,6 +296,46 @@ void color_object_detector_init(void)
 
   cv_add_to_device(&COLOR_OBJECT_DETECTOR_CAMERA2, object_detector2, COLOR_OBJECT_DETECTOR_FPS2);
 #endif
+
+// ###########################################################################################
+#ifdef COLOR_OBJECT_DETECTOR_CAMERA3    // not really sure where to define this outside this file
+  cv_add_to_device(&COLOR_OBJECT_DETECTOR_CAMERA3, offset_detector1, COLOR_OBJECT_DETECTOR_FPS3);
+#endif
+// ###########################################################################################
+
+}
+
+void color_object_detector_periodic(void)
+{
+  // ###########################################################################################
+  /*
+  *static struct offset_detected local_filter[1];
+   pthread_mutex_lock(&mutex);
+   memcpy(local_filter, offset_filter, sizeof(struct offset_detected));
+   pthread_mutex_unlock(&mutex);
+   if(local_filter[0].updated){
+    // we still have specify message itself in abi.xml
+    AbiSendMsgVISUAL_DETECTION(OFFSET_DETECTION1_ID, local_filter[0].offset);
+        local_filter[0].updated = false;
+  }
+  */
+  // ###########################################################################################
+
+  static struct color_object_t local_filters[2];
+  pthread_mutex_lock(&mutex);
+  memcpy(local_filters, global_filters, 2*sizeof(struct color_object_t));
+  pthread_mutex_unlock(&mutex);
+
+  if(local_filters[0].updated){
+    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c, local_filters[0].y_c,
+        local_filters[0].filter_width, local_filters[0].filter_height, local_filters[0].color_count, 0);
+    local_filters[0].updated = false;
+  }
+  if(local_filters[1].updated){
+    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].x_c, local_filters[1].y_c,
+        local_filters[0].filter_width, local_filters[0].filter_height, local_filters[1].color_count, 1);
+    local_filters[1].updated = false;
+  }
 }
 
 /*
@@ -404,6 +509,7 @@ void Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
                 }
             }
             next_y_value += STEP;
+            //return px_offset
         }
         //fprintf(stderr,"I AM HERE %d \n",wrong_zeros);
 //
@@ -457,21 +563,4 @@ void Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
 //    return(size-1);
 //}
 
-void color_object_detector_periodic(void)
-{
-  static struct color_object_t local_filters[2];
-  pthread_mutex_lock(&mutex);
-  memcpy(local_filters, global_filters, 2*sizeof(struct color_object_t));
-  pthread_mutex_unlock(&mutex);
 
-  if(local_filters[0].updated){
-    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c, local_filters[0].y_c,
-        local_filters[0].filter_width, local_filters[0].filter_height, local_filters[0].color_count, 0);
-    local_filters[0].updated = false;
-  }
-  if(local_filters[1].updated){
-    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].x_c, local_filters[1].y_c,
-        local_filters[0].filter_width, local_filters[0].filter_height, local_filters[1].color_count, 1);
-    local_filters[1].updated = false;
-  }
-}
