@@ -86,10 +86,10 @@ bool cod_draw2 = false;
 uint8_t R_green_low = 60, G_green_low = 70, B_green_low = 0; // Lower = [65,20,5]
 uint8_t R_green_hi = 100, G_green_hi = 200, B_green_hi = 45; // Higher = [95,255,95]
 uint8_t gray_threshold = 20;
-uint16_t STEP = 52;
+uint16_t STEP = 20;
 uint8_t filter_height_cut = 120;
 uint8_t thresh_lower = 5;
-
+uint8_t sections = 15; //NOTICE, IT APPROXIMATE TO THE CLOSEST INTEGER!!!!!
 
 // define global variables
 struct color_object_t{
@@ -111,7 +111,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
 void Burhan_filter(struct image_t *img, bool draw,
                    uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
                    uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold,
-                   uint8_t thresh_lower, uint8_t filter_height_cut);
+                   uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections);
 
 /*
  * object_detector
@@ -165,7 +165,7 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
 
 
     Burhan_filter(img, draw, R_green_low, G_green_low, B_green_low,
-                  R_green_hi, G_green_hi, B_green_hi, filter_height, thresh_lower, filter_height_cut);
+                  R_green_hi, G_green_hi, B_green_hi, filter_height, thresh_lower, filter_height_cut, sections);
   
 
   VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
@@ -313,107 +313,125 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
 }
 
 
-    void Burhan_filter(struct image_t *img, bool draw,
-                       uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
-                       uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi,
-                       uint8_t gray_threshold, uint8_t thresh_lower, uint8_t filter_height_cut)
-    {
-        uint16_t size = 0;
-        uint16_t ones_count = 0;
-        uint16_t wrong_zeros = 0;
-        uint8_t *buffer = img->buf;
-        uint16_t next_y_value = 0;
-        uint16_t bin_array[img->w];
-        uint16_t Green_pixel_value[(int) img->h/STEP ];
+void Burhan_filter(struct image_t *img, bool draw,
+                   uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
+                   uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi,
+                   uint8_t gray_threshold, uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections){
 
-        fprintf(stderr,"HEADING VALUES:  ");
-        for (uint16_t y = 0; y < img->h; y++) {
-            uint8_t cnt = 0;
-            uint16_t green_count;
-            for (uint16_t x = 0; x < img->w; x ++) {
-                // Check if the color is inside the specified values
-                uint8_t *yp, *up, *vp;
-                uint8_t pixel_b, pixel_g, pixel_r, pixel_value_local, pixel_value_local_gray;
-                if (x % 2 == 0) {
-                    // Even x
-                    up = &buffer[y * 2 * img->w + 2 * x];      // U
-                    yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
-                    vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
-                    //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
-                } else {
-                    // Uneven x
-                    up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
-                    //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
-                    vp = &buffer[y * 2 * img->w + 2 * x];      // V
-                    yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
-                }
-                //Transpose YUV in RGB
+    uint16_t size = 0;
+    uint16_t ones_count = 0;
+    uint16_t wrong_zeros = 0;
+    uint8_t *buffer = img->buf;
+    uint16_t next_y_value = 0;
+    uint16_t bin_array[img->w];
+    uint16_t Green_pixel_value[(int) img->h/STEP ];
+    //uint16_t Section_value[(int) sizeof(Green_pixel_value)/sizeof(uint16_t)/sections];
+    uint16_t Section_value[sections];
+    uint16_t idx_section = 0, section_count = 0;
+    uint16_t section_value = 0, storage_value = 0;
+    section_value = (int) img->h/STEP/sections ;
 
-                pixel_b = (int) fmin(255.f , 1.164f * ( *yp - 16) + 2.018f * ( *up - 128));
-                pixel_g = (int) fmin(255.f , 1.164f * ( *yp - 16) - 0.813f * ( *vp - 128) - 0.391f * ( *up - 128));
-                pixel_r = (int) fmin(255.f , 1.164f * ( *yp - 16) + 1.596f * ( *vp - 128));
+    fprintf(stderr,"HEADING VALUES:  ");
+    for (uint16_t y = 0; y < img->h; y++) {
+        uint8_t cnt = 0;
+        uint16_t green_count;
+        for (uint16_t x = 0; x < img->w; x ++) {
+            // Check if the color is inside the specified values
+            uint8_t *yp, *up, *vp;
+            uint8_t pixel_b, pixel_g, pixel_r, pixel_value_local, pixel_value_local_gray;
+            if (x % 2 == 0) {
+                // Even x
+                up = &buffer[y * 2 * img->w + 2 * x];      // U
+                yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
+                vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
+                //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
+            } else {
+                // Uneven x
+                up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
+                //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
+                vp = &buffer[y * 2 * img->w + 2 * x];      // V
+                yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
+            }
+            //Transpose YUV in RGB
 
-                //CREATE THE BITWISE_AND TOGETHER WITH THE INRANGE FCN
-                if ( (pixel_b >= B_green_low) && (pixel_b <= B_green_hi) &&
-                     (pixel_g >= G_green_low ) && (pixel_g <= G_green_hi ) &&
-                     (pixel_r >= R_green_low ) && (pixel_r <= R_green_hi )) {
+            pixel_b = (int) fmin(255.f , 1.164f * ( *yp - 16) + 2.018f * ( *up - 128));
+            pixel_g = (int) fmin(255.f , 1.164f * ( *yp - 16) - 0.813f * ( *vp - 128) - 0.391f * ( *up - 128));
+            pixel_r = (int) fmin(255.f , 1.164f * ( *yp - 16) + 1.596f * ( *vp - 128));
+
+            //CREATE THE BITWISE_AND TOGETHER WITH THE INRANGE FCN
+            if ( (pixel_b >= B_green_low) && (pixel_b <= B_green_hi) &&
+                 (pixel_g >= G_green_low ) && (pixel_g <= G_green_hi ) &&
+                 (pixel_r >= R_green_low ) && (pixel_r <= R_green_hi )) {
 //            if ( (*up >= 0) && (*up <= 120) &&
 //                 (*vp >= 0 ) && (*vp <= 120 ) &&
 //                 (*yp >= 50 ) && (*yp <= 200 )) {
-                    //IMPLEMENTING THE BGR TO GRAYSCALE
-                    pixel_value_local_gray = (int) 0.3f * pixel_r + 0.59f * pixel_g + 0.11f * pixel_b;
-                }
-                else{
-                    pixel_value_local_gray = 0;
-                }
-                //IMPLEMENTING THE THRESHOLD FCN
-                if(pixel_value_local_gray >= gray_threshold){
-                    cnt ++;
-                    bin_array[x] = 1;
-                    if(draw){
-                        *yp = 255; // make pixel brighter in image
-                    }
-                }
-                else {
-                    bin_array[x] = 0;
+                //IMPLEMENTING THE BGR TO GRAYSCALE
+                pixel_value_local_gray = (int) 0.3f * pixel_r + 0.59f * pixel_g + 0.11f * pixel_b;
+            }
+            else{
+                pixel_value_local_gray = 0;
+            }
+            //IMPLEMENTING THE THRESHOLD FCN
+            if(pixel_value_local_gray >= gray_threshold){
+                cnt ++;
+                bin_array[x] = 1;
+                if(draw){
+                    *yp = 255; // make pixel brighter in image
                 }
             }
+            else {
+                bin_array[x] = 0;
+            }
+        }
 
-            // FIND CONTINUOUS ZEROS FUNCTION
-            if(y == next_y_value) {
-                wrong_zeros = 0;
-                ones_count = 0;
-                int count2;
-                for (int k = filter_height_cut; k < img->w ; k ++) {
-                    uint8_t *yp;
-                    count2 = img->w - k;
-                    if (bin_array[count2] == 0) {
-                        if (ones_count > thresh_lower) {
-                            wrong_zeros ++;
-                            if (count2 % 2 == 0) {
-                                // Even x
-                                yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
-                            } else {
-                                // Uneven x
-                                yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
-                            }
-                            *yp = 255;
+        // FIND CONTINUOUS ZEROS FUNCTION
+        if(y == next_y_value) {
+            wrong_zeros = 0;
+            ones_count = 0;
+            int count2;
+            for (int k = filter_height_cut; k < img->w ; k ++) {
+                uint8_t *yp;
+                count2 = img->w - k;
+                if (bin_array[count2] == 0) {
+                    if (ones_count > thresh_lower) {
+                        wrong_zeros ++;
+                        //Write the pixel to image
+                        if (count2 % 2 == 0) {
+                            // Even x
+                            yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
+                        } else {
+                            // Uneven x
+                            yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
                         }
-                    }
-                    else if (bin_array[count2] == 1) {
-                        ones_count ++;
+                        *yp = 255;
                     }
                 }
-                next_y_value += STEP;
-                Green_pixel_value[green_count] = wrong_zeros + cnt;
-                fprintf(stderr," %d ",Green_pixel_value[green_count]);
-                green_count++;
+                else if (bin_array[count2] == 1) {
+                    ones_count ++;
+                }
             }
+            next_y_value += STEP;
+            Green_pixel_value[green_count] = wrong_zeros + cnt;
+            green_count++;
 
+
+            //REFINE THE FILTER INTO BIGGER CELLS
+            storage_value += wrong_zeros + cnt;
+            section_count++;
+            if(section_count > section_value ){
+                fprintf(stderr," %d ",storage_value);
+                Section_value[idx_section] = storage_value;
+                storage_value = 0;
+                section_count = 0;
+                idx_section++;
+            }
 
         }
-        fprintf(stderr,".\n ");
+
+    }
+    fprintf(stderr,".\n ");
 }
+
 
 
 
