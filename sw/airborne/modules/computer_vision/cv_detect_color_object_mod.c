@@ -89,7 +89,7 @@ uint8_t gray_threshold = 20;
 uint16_t STEP = 20;
 uint8_t filter_height_cut = 120;
 uint8_t thresh_lower = 5;
-uint8_t sections = 15; //NOTICE, IT APPROXIMATE TO THE CLOSEST INTEGER!!!!!
+uint8_t sections = 13; //NOTICE, IT APPROXIMATE TO THE CLOSEST INTEGER!!!!!
 
 // define global variables
 struct color_object_t{
@@ -324,9 +324,8 @@ void Burhan_filter(struct image_t *img, bool draw,
     uint8_t *buffer = img->buf;
     uint16_t next_y_value = 0;
     uint16_t bin_array[img->w];
-    uint16_t Green_pixel_value[(int) img->h/STEP ];
-    //uint16_t Section_value[(int) sizeof(Green_pixel_value)/sizeof(uint16_t)/sections];
-    uint16_t Section_value[sections];
+    uint16_t Green_pixel_value[(int) img->h/STEP];
+    float Section_value[sections];
     uint16_t idx_section = 0, section_count = 0;
     uint16_t section_value = 0, storage_value = 0;
     section_value = (int) img->h/STEP/sections ;
@@ -335,7 +334,7 @@ void Burhan_filter(struct image_t *img, bool draw,
     for (uint16_t y = 0; y < img->h; y++) {
         uint8_t cnt = 0;
         uint16_t green_count;
-        for (uint16_t x = 0; x < img->w; x ++) {
+        for (uint16_t x = 0; x < filter_height_cut ; x ++) {
             // Check if the color is inside the specified values
             uint8_t *yp, *up, *vp;
             uint8_t pixel_b, pixel_g, pixel_r, pixel_value_local, pixel_value_local_gray;
@@ -414,13 +413,12 @@ void Burhan_filter(struct image_t *img, bool draw,
             Green_pixel_value[green_count] = wrong_zeros + cnt;
             green_count++;
 
-
             //REFINE THE FILTER INTO BIGGER CELLS
             storage_value += wrong_zeros + cnt;
             section_count++;
-            if(section_count > section_value ){
-                fprintf(stderr," %d ",storage_value);
-                Section_value[idx_section] = storage_value;
+            if(section_count == (int) img->h/STEP/sections ){
+                Section_value[idx_section] = 1.0f * storage_value/(section_value*(img->w - filter_height_cut));
+                fprintf(stderr," %f ",Section_value[idx_section]);
                 storage_value = 0;
                 section_count = 0;
                 idx_section++;
