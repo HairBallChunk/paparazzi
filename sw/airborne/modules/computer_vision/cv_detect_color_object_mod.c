@@ -91,6 +91,7 @@ uint8_t filter_height_cut = 120;
 uint8_t thresh_lower = 5;
 uint8_t sections = 13; //NOTICE, IT APPROXIMATE TO THE CLOSEST INTEGER!!!!!
 float window_scale = 0.2;
+uint8_t print_weights = 0;
 
 // define global variables
 struct color_object_t{
@@ -109,10 +110,11 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
                               uint8_t cb_min, uint8_t cb_max,
                               uint8_t cr_min, uint8_t cr_max, uint16_t filter_height, uint16_t filter_width);
 
-uint16_t Burhan_filter(struct image_t *img, bool draw,
+uint32_t Burhan_filter(struct image_t *img, bool draw,
                    uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
                    uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold,
-                   uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections, float window_scale);
+                   uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections,
+                   float window_scale,  uint8_t print_weights);
 
 /*
  * object_detector
@@ -165,10 +167,10 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
 //                  R_green_hi, G_green_hi, B_green_hi, gray_threshold);
 
 
-    uint16_t max_idx = Burhan_filter(img, draw, R_green_low, G_green_low, B_green_low,
-                  R_green_hi, G_green_hi, B_green_hi, filter_height, thresh_lower, filter_height_cut, sections, window_scale);
-
-    fprintf(stderr,"OUR MAX SECTION IS : %d \n ",max_idx );
+    uint32_t max_idx = Burhan_filter(img, draw, R_green_low, G_green_low, B_green_low,
+                  R_green_hi, G_green_hi, B_green_hi, filter_height, thresh_lower, filter_height_cut, sections,
+                  window_scale, print_weights);
+    
   VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
   VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
         hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
@@ -314,11 +316,11 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
 }
 
 
-uint16_t Burhan_filter(struct image_t *img, bool draw,
+uint32_t Burhan_filter(struct image_t *img, bool draw,
                    uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
                    uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi,
                    uint8_t gray_threshold, uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections,
-                   float window_scale){
+                   float window_scale, uint8_t print_weights){
 
     uint16_t size = 0;
     uint16_t ones_count = 0;
@@ -335,7 +337,7 @@ uint16_t Burhan_filter(struct image_t *img, bool draw,
     max_idx = -1;
     Section_value[-1] = 0;
 
-    fprintf(stderr,"WEIGHT FOR EACH SECTION :  ");
+
     for (uint16_t y = 0; y < img->h; y += STEP) {
         uint8_t cnt = 0;
         uint16_t green_count;
@@ -425,7 +427,6 @@ uint16_t Burhan_filter(struct image_t *img, bool draw,
                 //Adding the weight
                 weight = 1.f - (fabs(idx_section + 1 - ceil(sections*0.5f))/ceil(sections*0.5f)) * window_scale;
                 Section_value[idx_section] = weight * storage_value/(section_value*(img->w - filter_height_cut));
-                fprintf(stderr," %f ",Section_value[idx_section]);
                 storage_value = 0;
                 section_count = 0;
                 if(Section_value[idx_section] > Section_value[max_idx] ){
@@ -436,8 +437,15 @@ uint16_t Burhan_filter(struct image_t *img, bool draw,
         }
 
     }
+    if(print_weights){
+        fprintf(stderr,"WEIGHT FOR EACH SECTION :  ");
+        for (int i = 0 ; i < sections ; i++){
+            fprintf(stderr," %f ",Section_value[i]);
+        }
+        fprintf(stderr,".\n ");
+        fprintf(stderr,"OUR MAX SECTION IS : %d \n ",max_idx + 1);
+    }
 
-    fprintf(stderr,".\n ");
     return(max_idx + 1);
 }
 
