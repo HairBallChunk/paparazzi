@@ -54,16 +54,17 @@ static pthread_mutex_t mutex;
 #define OFFSET_DETECTOR_FPS1 0 ///< Default FPS (zero means run at camera fps)
 #endif
 
-//Burhan filter settings:
-uint8_t Green_percentage[520];
+//Burhan filter settings: KEEP THEM!!!
 uint8_t R_green_low = 60, G_green_low = 70, B_green_low = 0; // Lower = [65,20,5]
 uint8_t R_green_hi = 100, G_green_hi = 200, B_green_hi = 45; // Higher = [95,255,95]
 uint8_t gray_threshold = 20;
-uint8_t thresh_lower = 0, thresh_upper = 120;
-uint16_t STEP = 1;
-uint16_t MAX_image_height = 120;
-uint16_t filter_height1 = 0;
-bool draw = false;
+uint16_t STEP = 20;
+uint8_t filter_height_cut = 120;
+uint8_t thresh_lower = 5;
+uint8_t sections = 13; //NOTICE, IT APPROXIMATE TO THE CLOSEST INTEGER!!!!!
+float window_scale = 0.2;
+uint8_t print_weights = 0;
+uint8_t draw_on_img = 1;
 
 // structure to store filter results
 struct offset_detected{
@@ -74,9 +75,12 @@ struct offset_detected offset_filter[1];
 
 // we want this to be a variable called px_offset probably uint32_t like above to sore px_offset instead of count
 // Function for filter initialization
-uint32_t Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
+// init of function
+uint32_t Burhan_filter(struct image_t *img, uint8_t draw_on_img,
                    uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
-                   uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold);
+                   uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold,
+                   uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections,
+                   float window_scale,  uint8_t print_weights);
 
 /*
  * offset_detector
@@ -87,8 +91,10 @@ uint32_t Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw
 static struct image_t *offset_detector(struct image_t *img)
 {
  // function for filter periodic
- uint32_t px_offset = Burhan_filter(img, &Green_percentage, draw, R_green_low, G_green_low, B_green_low,
-                   R_green_hi, G_green_hi, B_green_hi, filter_height1);
+ // usage of function
+ uint32_t px_offset = Burhan_filter(img, draw_on_img, R_green_low, G_green_low, B_green_low,
+                                        R_green_hi, G_green_hi, B_green_hi, gray_threshold, thresh_lower, filter_height_cut, sections,
+                                        window_scale, print_weights);
 
  VERBOSE_PRINT("px_offset: %d", px_offset);
 
@@ -144,24 +150,32 @@ void offset_detector_periodic(void)
  * @param img - input image to process formatted as YUV422.
  * etc.
  */
-uint32_t Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw,
-                  uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
-                  uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold)
-{
+uint32_t Burhan_filter(struct image_t *img, uint8_t draw,
+                   uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
+                   uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi,
+                   uint8_t gray_threshold, uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections,
+                   float window_scale, uint8_t print_weights){
+
     uint16_t size = 0;
     uint16_t ones_count = 0;
     uint16_t wrong_zeros = 0;
-    uint8_t flag_start = 0, flag_zero = 0;
-    uint8_t end_loop = 120;
-
-    uint32_t cnt = 0;
-    uint32_t px_offset = 0;
     uint8_t *buffer = img->buf;
     uint16_t next_y_value = 0;
     uint16_t bin_array[img->w];
-    for (uint16_t y = 0; y < img->h; y++) {
-        cnt = 0;
-        for (uint16_t x = 0; x < img->w; x ++) {
+    uint16_t Green_pixel_value[(int) img->h/STEP];
+    float Section_value[sections], weight = 0;
+    uint16_t idx_section = 0, section_count = 0;
+    uint16_t section_value = 0, storage_value = 0, max_idx = 0;
+
+    section_value = (int) img->h/STEP/sections;
+    max_idx = -1;
+    Section_value[-1] = 0;
+
+
+    for (uint16_t y = 0; y < img->h; y += STEP) {
+        uint8_t cnt = 0;
+        uint16_t green_count;
+        for (uint16_t x = 0; x < filter_height_cut ; x ++) {
             // Check if the color is inside the specified values
             uint8_t *yp, *up, *vp;
             uint8_t pixel_b, pixel_g, pixel_r, pixel_value_local, pixel_value_local_gray;
@@ -208,28 +222,30 @@ uint32_t Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw
             else {
                 bin_array[x] = 0;
             }
-//            fprintf(stderr,"I AM HERE %d \n",bin_array[y]);
         }
-        Green_percentage++;
+
+        // FIND CONTINUOUS ZEROS FUNCTION
         if(y == next_y_value) {
             wrong_zeros = 0;
             ones_count = 0;
             int count2;
-//            uint16_t size = find_continous_zeros( &bin_array, bin_array_length, thresh_lower, thresh_upper);
-            for (int k = MAX_image_height; k < img->w ; k ++) {
+            for (int k = filter_height_cut; k < img->w ; k ++) {
                 uint8_t *yp;
                 count2 = img->w - k;
                 if (bin_array[count2] == 0) {
-                    if (ones_count > 0) {
+                    if (ones_count > thresh_lower) {
                         wrong_zeros ++;
-                        if (count2 % 2 == 0) {
-                            // Even x
-                            yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
-                        } else {
-                            // Uneven x
-                            yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
+                        //Write the pixel to image
+                        if(draw) {
+                            if (count2 % 2 == 0) {
+                                // Even x
+                                yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
+                            } else {
+                                // Uneven x
+                                yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
+                            }
+                            *yp = 255;
                         }
-                        *yp = 255;
                     }
                 }
                 else if (bin_array[count2] == 1) {
@@ -237,10 +253,36 @@ uint32_t Burhan_filter(struct image_t *img, uint8_t *Green_percentage, bool draw
                 }
             }
             next_y_value += STEP;
-            px_offset += 1;
-            return px_offset;
+            Green_pixel_value[green_count] = wrong_zeros + cnt;
+            green_count++;
+
+            //REFINE THE FILTER INTO BIGGER CELLS
+            storage_value += wrong_zeros + cnt;
+            section_count++;
+            if(section_count == section_value){
+                //Adding the weight
+                weight = 1.f - (fabs(idx_section + 1 - ceil(sections*0.5f))/ceil(sections*0.5f)) * window_scale;
+                Section_value[idx_section] = weight * storage_value/(section_value*(img->w - filter_height_cut));
+                storage_value = 0;
+                section_count = 0;
+                if(Section_value[idx_section] > Section_value[max_idx] ){
+                    max_idx = idx_section;
+                }
+                idx_section++;
+            }
         }
+
     }
+    if(print_weights){
+        fprintf(stderr,"WEIGHT FOR EACH SECTION :  ");
+        for (int i = 0 ; i < sections ; i++){
+            fprintf(stderr," %f ",Section_value[i]);
+        }
+        fprintf(stderr,".\n ");
+        fprintf(stderr,"OUR MAX SECTION IS : %d \n ",max_idx + 1);
+    }
+
+    return(max_idx + 1);
 }
 
 

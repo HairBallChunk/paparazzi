@@ -52,7 +52,9 @@ float oag_max_speed_mod = 0.5f;               // max flight speed [m/s]
 float oag_heading_rate_mod = RadOfDeg(20.f);  // heading change setpoint for avoidance [rad/s]
 
 // ###########################################################################################
-int32_t px_offset = 0;
+int32_t px_offset = 0;      // for abi message from Burhan filter
+
+float heading_gain = 0.3f;       // variable that is multiplied with px_offset to arrive at heading rate
 // ###########################################################################################
 
 // define and initialise global variables
@@ -105,7 +107,10 @@ static abi_event offset_detection_ev;
 static void offset_detection_cb(uint8_t __attribute__((unused)) sender_id,
                             float __attribute__((unused)) pixel_offset)
 {
+if (pixel_offset < 14)      // this check is necessary for limiting the output (since function does not return correct output consistently)
+    {
     px_offset = pixel_offset;
+    }
 }
 // ###########################################################################################
 
@@ -168,6 +173,18 @@ void mav_exercise_periodic(void)
         navigation_state_mod = OBSTACLE_FOUND;
       } else {
         guidance_h_set_guided_body_vel(speed_sp, 0);
+
+        // ###########################################################################################
+        // extra heading rate when the index is sufficiently far away from center (px_offset = 7)
+        if (px_offset < 6 || px_offset > 8)
+            {
+             guidance_h_set_guided_heading_rate(avoidance_heading_direction_mod * heading_gain * px_offset);
+            }
+        else        // setting back to closed inner loop for autopilot
+            {
+             guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
+            }
+        // ###########################################################################################
       }
 
       break;

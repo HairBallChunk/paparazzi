@@ -28,6 +28,20 @@
 #ifndef COLOR_OBJECT_DETECTOR_MOD_CV_H
 #define COLOR_OBJECT_DETECTOR_MOD_CV_H
 
+#include <stdint.h>
+
+//Burhan filter settings
+extern uint8_t R_green_low, G_green_low, B_green_low;
+extern uint8_t R_green_hi, G_green_hi, B_green_hi;
+extern uint8_t gray_threshold;
+extern uint16_t STEP;
+extern uint8_t filter_height_cut;
+extern uint8_t thresh_lower;
+extern uint8_t sections;
+extern float window_scale;
+extern uint8_t print_weights;
+extern uint8_t draw_on_img;
+
 // Module functions
 extern void offset_detector_init(void);
 extern void offset_detector_periodic(void);

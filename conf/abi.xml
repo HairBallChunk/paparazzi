@@ -208,7 +208,7 @@
 
 
     <message name="OFFSET_DETECTION" id="29">
-      <field name="pixel_offset"      type="int32_t">Detection offset heading</field>
+      <field name="pixel_offset"      type="float">Detection offset heading</field>
     </message>
 
     <!--###########################################################################################-->
