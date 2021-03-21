@@ -74,6 +74,8 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
   filter_height = pixel_height;
   filter_width = pixel_width;
 }
+static uint8_t calculate_offset2waypoint(struct EnuCoor_i *new_coor, float distanceMeters, float d_heading);
+uint8_t moveWaypoint_offset2waypoint(uint8_t waypoint, float distanceMeters, float d_heading);
 
 //` needed to receive output from a separate module running on a parallel process (Opticalflow)
 #ifndef OPTICAL_FLOW_ID
@@ -139,19 +141,35 @@ void mav_exercise_periodic(void) {
 
   // bound obstacle_free_confidence
   Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
+float N_bins;
+float n_offset;
+float fov_h_heading_calc;
+float d_heading;
 
   switch (navigation_state) {
     case SAFE:
+    	N_bins = 13.f; //n_bins
+    	n_offset = Section_max_idx * 1.f; // px_offset
+    	fov_h_heading_calc = 80.0f * 3.14f / 180.0f; // estimated horizontal field of view
+    	d_heading = (2*n_offset- N_bins - 1) / (N_bins+1) * fov_h_heading_calc/2;
+    	PRINT("SAFE\n");
+//    	moveWaypoint_offset2waypoint(WP_TRAJECTORY, 1.5f * moveDistance, d_heading);
+//    	increase_nav_heading((int) (d_heading * 180. / 3.14));
       moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
+
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
         navigation_state = OUT_OF_BOUNDS;
-      } else if (obstacle_free_confidence == 0) {
-        navigation_state = OBSTACLE_FOUND;
+//      } else if (obstacle_free_confidence == 0) {
+//        navigation_state = OBSTACLE_FOUND;
       } else {
         moveWaypointForward(WP_GOAL, moveDistance);
+//        moveWaypoint_offset2waypoint(WP_GOAL, 1.5f * moveDistance, d_heading);
+        increase_nav_heading((int) (d_heading * 180. / 3.14));
+        PRINT("SAFE->ELSE\n");
       }
       break;
     case OBSTACLE_FOUND:
+    	PRINT("OBSTACLE FOUND\n");
       // TODO Change behavior
       // stop as soon as obstacle is found
       waypoint_move_here_2d(WP_GOAL);
@@ -160,6 +178,7 @@ void mav_exercise_periodic(void) {
       navigation_state = TURN_20_DEG_AND_SEARCH;
       break;
     case TURN_20_DEG_AND_SEARCH:
+    	PRINT("TURN_20_DEG_AND_SEARCH\n");
           //shift the heading of 10deg and check if the spot is open
           increase_nav_heading(10.f);
           // make sure we have a couple of good readings before declaring the way safe
@@ -168,6 +187,7 @@ void mav_exercise_periodic(void) {
           }
       break;
     case OUT_OF_BOUNDS:
+    	PRINT("OUT_OF_BOUNDS\n");
       // stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
@@ -211,8 +231,11 @@ static uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeter
   // Now determine where to place the waypoint you want to go to
   new_coor->x = stateGetPositionEnu_i()->x + POS_BFP_OF_REAL(sinf(heading) * (distanceMeters));
   new_coor->y = stateGetPositionEnu_i()->y + POS_BFP_OF_REAL(cosf(heading) * (distanceMeters));
+
   return false;
 }
+
+
 
 /*
  * Sets waypoint 'waypoint' to the coordinates of 'new_coor'
@@ -231,3 +254,25 @@ uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters) {
   moveWaypoint(waypoint, &new_coor);
   return false;
 }
+
+
+
+////////////////////////////////////////////////////////
+static uint8_t calculate_offset2waypoint(struct EnuCoor_i *new_coor, float distanceMeters, float d_heading) {
+  float heading = stateGetNedToBodyEulers_f()->psi;
+
+  // Now determine where to place the waypoint you want to go to
+  PRINT("calc_offset2waypoint %f deg heading, %f deg d_heading\n", heading  * 180 / 3.14, d_heading * 180 / 3.14);
+  new_coor->x = stateGetPositionEnu_i()->x + POS_BFP_OF_REAL(sinf(heading + d_heading) * (distanceMeters));
+  new_coor->y = stateGetPositionEnu_i()->y + POS_BFP_OF_REAL(cosf(heading + d_heading) * (distanceMeters));
+
+  return false;
+}
+
+uint8_t moveWaypoint_offset2waypoint(uint8_t waypoint, float distanceMeters, float d_heading) {
+  struct EnuCoor_i new_coor;
+  calculate_offset2waypoint(&new_coor, distanceMeters, d_heading);
+  moveWaypoint(waypoint, &new_coor);
+  return false;
+}
+
