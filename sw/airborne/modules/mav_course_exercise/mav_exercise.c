@@ -19,189 +19,218 @@
  */
 
 #include "mav_exercise.h"
-#include "subsystems/abi.h"
-#include "firmwares/rotorcraft/navigation.h"
+#include "firmwares/rotorcraft/guidance/guidance_h.h"
+#include "generated/airframe.h"
 #include "state.h"
-#include "autopilot_static.h"
+#include "subsystems/abi.h"
 #include <stdio.h>
+#include <time.h>
 
-#define NAV_C // needed to get the nav functions like Inside...
-#include "generated/flight_plan.h"
+#define ORANGE_AVOIDER_VERBOSE TRUE
 
-#define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+#define PRINT(string,...) fprintf(stderr, "[orange_avoider_guided->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+#if ORANGE_AVOIDER_VERBOSE
+#define VERBOSE_PRINT PRINT
+#else
+#define VERBOSE_PRINT(...)
+#endif
 
-uint8_t increase_nav_heading(float incrementDegrees);
-uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
-uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor);
+uint8_t chooseRandomIncrementAvoidance_mod(void);
 
 enum navigation_state_t {
   SAFE,
   OBSTACLE_FOUND,
+  SEARCH_FOR_SAFE_HEADING,
   OUT_OF_BOUNDS,
-  HOLD,
-  TURN_20_DEG_AND_SEARCH
+  REENTER_ARENA
 };
 
+// define settings
+float oag_color_count_frac_mod = 0.18f;       // obstacle detection threshold as a fraction of total of image
+float oag_floor_count_frac_mod = 0.05f;       // floor detection threshold as a fraction of total of image
+float oag_max_speed_mod = 0.5f;               // max flight speed [m/s]
+float oag_heading_rate_mod = RadOfDeg(20.f);  // heading change setpoint for avoidance [rad/s]
+
+// ###########################################################################################
+int32_t px_offset = 0;
+// ###########################################################################################
+
 // define and initialise global variables
-enum navigation_state_t navigation_state = SAFE;
-int32_t color_count = 0;               // orange color count from color filter for obstacle detection
-int16_t filter_height = 0;
-int16_t filter_width = 0;
-float divergence_value_exercise = 0; //divergence value needed for the obstacle avoidance algorithm
-int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
-float moveDistance = .5;                 // waypoint displacement [m]
-float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
-const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
+enum navigation_state_t navigation_state_mod = SEARCH_FOR_SAFE_HEADING;   // current state in state machine
+int32_t color_count_mod = 0;                // orange color count from color filter for obstacle detection
+int32_t floor_count_mod = 0;                // green color count from color filter for floor detection
+int32_t floor_centroid_mod = 0;             // floor detector centroid in y direction (along the horizon)
+float avoidance_heading_direction_mod = 0;  // heading change direction for avoidance [rad/s]
+int16_t obstacle_free_confidence_mod = 0;   // a measure of how certain we are that the way ahead if safe.
 
 
 //` needed to receive output from a separate module running on a parallel process`
+const int16_t max_trajectory_confidence_mod = 5;  // number of consecutive negative object detections to be sure we are obstacle free
+
+// This call back will be used to receive the color count from the orange detector
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
-#define ORANGE_AVOIDER_VISUAL_DETECTION_ID ABI_BROADCAST
+#error This module requires two color filters, as such you have to define ORANGE_AVOIDER_VISUAL_DETECTION_ID to the orange filter
+#error Please define ORANGE_AVOIDER_VISUAL_DETECTION_ID to be COLOR_OBJECT_DETECTION1_ID or COLOR_OBJECT_DETECTION2_ID in your airframe
 #endif
 static abi_event color_detection_ev;
 static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
                                int16_t __attribute__((unused)) pixel_x, int16_t __attribute__((unused)) pixel_y,
-                               int16_t __attribute__((unused)) pixel_width,
-                               int16_t __attribute__((unused)) pixel_height,
-                               int32_t quality, int16_t __attribute__((unused)) extra) {
-  color_count = quality;
-  filter_height = pixel_height;
-  filter_width = pixel_width;
+                               int16_t __attribute__((unused)) pixel_width, int16_t __attribute__((unused)) pixel_height,
+                               int32_t quality, int16_t __attribute__((unused)) extra)
+{
+  color_count_mod = quality;
 }
 
-//` needed to receive output from a separate module running on a parallel process (Opticalflow)
-#ifndef OPTICAL_FLOW_ID
-#define OPTICAL_FLOW_ID ABI_BROADCAST
+#ifndef FLOOR_VISUAL_DETECTION_ID
+#error This module requires two color filters, as such you have to define FLOOR_VISUAL_DETECTION_ID to the orange filter
+#error Please define FLOOR_VISUAL_DETECTION_ID to be COLOR_OBJECT_DETECTION1_ID or COLOR_OBJECT_DETECTION2_ID in your airframe
 #endif
-static abi_event optical_flow_ev;
-static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
-                            uint32_t __attribute__((unused)) stamp,
-                            int16_t __attribute__((unused)) flow_x,
-                            int16_t __attribute__((unused)) flow_y,
-                            int16_t __attribute__((unused)) flow_der_x,
-                            int16_t __attribute__((unused)) flow_der_y,
-                            float __attribute__((unused)) quality,
-                            float __attribute__((unused)) size_divergent) {
-    divergence_value_exercise = size_divergent;
-}
-void mav_exercise_init(void) {
-  // bind our colorfilter callbacks to receive the color filter outputs
-  AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
-  AbiBindMsgOPTICAL_FLOW(FLOW_OPTICFLOW_ID, &optical_flow_ev, optical_flow_cb);
+static abi_event floor_detection_ev;
+static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
+                               int16_t __attribute__((unused)) pixel_x, int16_t pixel_y,
+                               int16_t __attribute__((unused)) pixel_width, int16_t __attribute__((unused)) pixel_height,
+                               int32_t quality, int16_t __attribute__((unused)) extra)
+{
+  floor_count_mod = quality;
+  floor_centroid_mod = pixel_y;
 }
 
-void mav_exercise_periodic(void) {
-  // only evaluate our state machine if we are flying
-  if (!autopilot_in_flight()) {
+
+// ###########################################################################################
+//` needed to receive output from a separate module running on a parallel process (defined in cv_detect_color_object_mod.xml)
+#ifndef OFFSET_DETECTION_ID
+#error Please define OFFSET_DETECTION_ID
+#endif
+static abi_event offset_detection_ev;
+static void offset_detection_cb(uint8_t __attribute__((unused)) sender_id,
+                            float __attribute__((unused)) pixel_offset)
+{
+    px_offset = pixel_offset;
+}
+// ###########################################################################################
+
+/*
+ * Initialisation function
+ */
+void mav_exercise_init(void) {
+  // Initialise random values
+    srand(time(NULL));
+    chooseRandomIncrementAvoidance_mod();
+
+  // bind our colorfilter callbacks to receive the color filter outputs
+  // ###########################################################################################
+  AbiBindMsgOFFSET_DETECTION(OFFSET_DETECTION_ID, &offset_detection_ev, offset_detection_cb);
+  // ###########################################################################################
+
+  AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
+  AbiBindMsgVISUAL_DETECTION(FLOOR_VISUAL_DETECTION_ID, &floor_detection_ev, floor_detection_cb);
+}
+
+/*
+ * Function that checks it is safe to move forwards, and then sets a forward velocity setpoint or changes the heading
+ */
+void mav_exercise_periodic(void)
+{
+  // Only run the mudule if we are in the correct flight mode
+  if (guidance_h.mode != GUIDANCE_H_MODE_GUIDED) {
+    navigation_state_mod = SEARCH_FOR_SAFE_HEADING;
+    obstacle_free_confidence_mod = 0;
     return;
   }
 
   // compute current color thresholds
-  // front_camera defined in airframe xml, with the video_capture module
-  int32_t color_count_threshold = object_detector_sensitivity * filter_height * filter_width;
+  int32_t color_count_threshold = oag_color_count_frac_mod * front_camera.output_size.w * front_camera.output_size.h;
+  int32_t floor_count_threshold = oag_floor_count_frac_mod * front_camera.output_size.w * front_camera.output_size.h;
+  float floor_centroid_frac = floor_centroid_mod / (float)front_camera.output_size.h / 2.f;
 
-  PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
-  if(divergence_value_exercise>=0.02){
-      PRINT("OPTICAL FLOW VALUE : %f  \n", divergence_value_exercise);
-  }
+  VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count_mod, color_count_threshold, navigation_state_mod);
+  VERBOSE_PRINT("Floor count: %d, threshold: %d\n", floor_count_mod, floor_count_threshold);
+  VERBOSE_PRINT("Floor centroid: %f\n", floor_centroid_frac);
+  VERBOSE_PRINT("px_offset: %d\n", px_offset);
+
   // update our safe confidence using color threshold
-  if (color_count < color_count_threshold) {
-    obstacle_free_confidence++;
+  if(color_count_mod < color_count_threshold){
+    obstacle_free_confidence_mod++;
   } else {
-    obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
+    obstacle_free_confidence_mod -= 2;  // be more cautious with positive obstacle detections
   }
 
   // bound obstacle_free_confidence
-  Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
+  Bound(obstacle_free_confidence_mod, 0, max_trajectory_confidence_mod);
 
-  switch (navigation_state) {
+  float speed_sp = fminf(oag_max_speed_mod, 0.2f * obstacle_free_confidence_mod);
+
+  switch (navigation_state_mod){
     case SAFE:
-      moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
-      if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
-        navigation_state = OUT_OF_BOUNDS;
-      } else if (obstacle_free_confidence == 0) {
-        navigation_state = OBSTACLE_FOUND;
+      if (floor_count_mod < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
+        navigation_state_mod = OUT_OF_BOUNDS;
+      } else if (obstacle_free_confidence_mod == 0){
+        navigation_state_mod = OBSTACLE_FOUND;
       } else {
-        moveWaypointForward(WP_GOAL, moveDistance);
+        guidance_h_set_guided_body_vel(speed_sp, 0);
       }
+
       break;
     case OBSTACLE_FOUND:
-      // TODO Change behavior
-      // stop as soon as obstacle is found
-      waypoint_move_here_2d(WP_GOAL);
-      waypoint_move_here_2d(WP_TRAJECTORY);
+      // stop
+      guidance_h_set_guided_body_vel(0, 0);
 
-      navigation_state = TURN_20_DEG_AND_SEARCH;
+      // randomly select new search direction
+      chooseRandomIncrementAvoidance_mod();
+
+      navigation_state_mod = SEARCH_FOR_SAFE_HEADING;
+
       break;
-    case TURN_20_DEG_AND_SEARCH:
-          //shift the heading of 10deg and check if the spot is open
-          increase_nav_heading(10.f);
-          // make sure we have a couple of good readings before declaring the way safe
-          if (obstacle_free_confidence >= 2){
-              navigation_state = SAFE;
-          }
+    case SEARCH_FOR_SAFE_HEADING:
+      guidance_h_set_guided_heading_rate(avoidance_heading_direction_mod * oag_heading_rate_mod);
+
+      // make sure we have a couple of good readings before declaring the way safe
+      if (obstacle_free_confidence_mod >= 2){
+        guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
+        navigation_state_mod = SAFE;
+      }
       break;
     case OUT_OF_BOUNDS:
       // stop
-      waypoint_move_here_2d(WP_GOAL);
-      waypoint_move_here_2d(WP_TRAJECTORY);
+      guidance_h_set_guided_body_vel(0, 0);
 
-      increase_nav_heading(oob_haeding_increment);
-      moveWaypointForward(WP_TRAJECTORY, 1.5f);
+      // start turn back into arena
+      guidance_h_set_guided_heading_rate(avoidance_heading_direction_mod * RadOfDeg(15));
 
-      if (InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
-        // add offset to head back into arena
-        increase_nav_heading(oob_haeding_increment);
-        navigation_state = SAFE;
+      navigation_state_mod = REENTER_ARENA;
+
+      break;
+    case REENTER_ARENA:
+      // force floor center to opposite side of turn to head back into arena
+      if (floor_count_mod >= floor_count_threshold && avoidance_heading_direction_mod * floor_centroid_frac >= 0.f){
+        // return to heading mode
+        guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
+
+        // reset safe counter
+        obstacle_free_confidence_mod = 0;
+
+        // ensure direction is safe before continuing
+        navigation_state_mod = SAFE;
       }
       break;
-    case HOLD:
     default:
       break;
   }
+  return;
 }
 
 /*
- * Increases the NAV heading. Assumes heading is an INT32_ANGLE. It is bound in this function.
+ * Sets the variable 'incrementForAvoidance' randomly positive/negative
  */
-uint8_t increase_nav_heading(float incrementDegrees) {
-  float new_heading = stateGetNedToBodyEulers_f()->psi + RadOfDeg(incrementDegrees);
-
-  // normalize heading to [-pi, pi]
-  FLOAT_ANGLE_NORMALIZE(new_heading);
-
-  // set heading
-  nav_heading = ANGLE_BFP_OF_REAL(new_heading);
-
-  return false;
-}
-
-/*
- * Calculates coordinates of a distance of 'distanceMeters' forward w.r.t. current position and heading
- */
-static uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters) {
-  float heading = stateGetNedToBodyEulers_f()->psi;
-
-  // Now determine where to place the waypoint you want to go to
-  new_coor->x = stateGetPositionEnu_i()->x + POS_BFP_OF_REAL(sinf(heading) * (distanceMeters));
-  new_coor->y = stateGetPositionEnu_i()->y + POS_BFP_OF_REAL(cosf(heading) * (distanceMeters));
-  return false;
-}
-
-/*
- * Sets waypoint 'waypoint' to the coordinates of 'new_coor'
- */
-uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor) {
-  waypoint_move_xy_i(waypoint, new_coor->x, new_coor->y);
-  return false;
-}
-
-/*
- * Calculates coordinates of distance forward and sets waypoint 'waypoint' to those coordinates
- */
-uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters) {
-  struct EnuCoor_i new_coor;
-  calculateForwards(&new_coor, distanceMeters);
-  moveWaypoint(waypoint, &new_coor);
+uint8_t chooseRandomIncrementAvoidance_mod(void)
+{
+  // Randomly choose CW or CCW avoiding direction
+  if (rand() % 2 == 0) {
+    avoidance_heading_direction_mod = 1.f;
+    VERBOSE_PRINT("Set avoidance increment to: %f\n", avoidance_heading_direction_mod * oag_heading_rate_mod);
+  } else {
+    avoidance_heading_direction_mod = -1.f;
+    VERBOSE_PRINT("Set avoidance increment to: %f\n", avoidance_heading_direction_mod * oag_heading_rate_mod);
+  }
   return false;
 }

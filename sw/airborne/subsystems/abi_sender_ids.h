@@ -434,6 +434,15 @@
 #define OBS_DETECTION_MULTI_RANGER_DECK_ID 4
 #endif
 
+// ###########################################################################################
+/*
+ * IDs of Offset detection systems (message 29)
+ */
+ #ifndef OFFSET_DETECTION1_ID
+ #define OFFSET_DETECTION1_ID 1
+ #endif
+ // ###########################################################################################
+
 /*
  * ID's of forcefield generating type functions
  */

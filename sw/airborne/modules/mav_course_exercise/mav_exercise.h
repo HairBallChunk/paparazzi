@@ -22,7 +22,10 @@
 #define PAPARAZZI_MAV_EXERCISE_H
 
 // settings
-extern float object_detector_sensitivity;
+extern float oag_color_count_frac_mod;  // obstacle detection threshold as a fraction of total of image
+extern float oag_floor_count_frac_mod;  // floor detection threshold as a fraction of total of image
+extern float oag_max_speed_mod;         // max flight speed [m/s]
+extern float oag_heading_rate_mod;      // heading rate setpoint [rad/s]
 
 extern void mav_exercise_init(void);
 extern void mav_exercise_periodic(void);
