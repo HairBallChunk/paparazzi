@@ -5,6 +5,7 @@
     <description>Burhan filter detector
     Detects the cleared path using the Burhan filter. Optionally draws on image.
     </description>
+    <define name="SEND_ABI_ID" value="1" description="ABI sender id for burhan filter messages (default: 1)"/>
   </doc>
   <settings>
     <dl_settings>

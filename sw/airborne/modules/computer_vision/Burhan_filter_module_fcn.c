@@ -58,7 +58,7 @@ uint8_t draw_on_img = 1;
 
 
 struct communicate_msg{
-    int32_t section_idx;
+    uint32_t section_idx;
     bool updated;
 };
 
@@ -72,7 +72,7 @@ uint32_t Burhan_filter(struct image_t *img, uint8_t draw_on_img,
                    float window_scale,  uint8_t print_weights);
 
 
-static struct image_t *Burhan_fcn(struct image_t *img, uint8_t filter)
+static struct image_t *Burhan_fcn(struct image_t *img)
 {
 
   //Using the Burhan filter
@@ -92,7 +92,7 @@ static struct image_t *Burhan_fcn(struct image_t *img, uint8_t filter)
 struct image_t *burhan_filter1(struct image_t *img);
 struct image_t *burhan_filter1(struct image_t *img)
 {
-  return Burhan_fcn(img, 1);
+  return Burhan_fcn(img);
 }
 
 
@@ -114,7 +114,6 @@ uint32_t Burhan_filter(struct image_t *img, uint8_t draw,
                    uint8_t gray_threshold, uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections,
                    float window_scale, uint8_t print_weights){
 
-    uint16_t size = 0;
     uint16_t ones_count = 0;
     uint16_t wrong_zeros = 0;
     uint8_t *buffer = img->buf;
@@ -126,8 +125,8 @@ uint32_t Burhan_filter(struct image_t *img, uint8_t draw,
     uint16_t section_value = 0, storage_value = 0, max_idx = 0;
 
     section_value = (int) img->h/STEP/sections;
-    max_idx = -1;
-    Section_value[-1] = 0;
+    max_idx = sections - 1;
+    Section_value[max_idx] = 0;
 
 
     for (uint16_t y = 0; y < img->h; y += STEP) {
@@ -136,7 +135,7 @@ uint32_t Burhan_filter(struct image_t *img, uint8_t draw,
         for (uint16_t x = 0; x < filter_height_cut ; x ++) {
             // Check if the color is inside the specified values
             uint8_t *yp, *up, *vp;
-            uint8_t pixel_b, pixel_g, pixel_r, pixel_value_local, pixel_value_local_gray;
+            uint8_t pixel_b, pixel_g, pixel_r, pixel_value_local_gray;
             if (x % 2 == 0) {
                 // Even x
                 up = &buffer[y * 2 * img->w + 2 * x];      // U
@@ -254,8 +253,8 @@ void burhan_filter_periodic(void)
 
 
   if(local_msg[0].updated){
-      //ADD YOUR ABI MESSAGE HERE (FOR MICHIEL)
-//    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c, local_filters[0].y_c,
+      //ABI MESSAGE
+    AbiSendMsgBURHAN_FILTER(BURHAN_FILTER_ABI_ID, local_msg[0].section_idx);
 //        local_filters[0].filter_width, local_filters[0].filter_height, local_filters[0].color_count, 0);
       local_msg[0].updated = false;
   }

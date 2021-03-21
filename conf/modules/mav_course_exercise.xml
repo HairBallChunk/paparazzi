@@ -8,8 +8,8 @@
 </doc>
   <settings>
     <dl_settings>
-      <dl_settings name="MAV_exercise_parameters">
-        <dl_setting var="object_detector_sensitivity" min="0" step=".05" max="1" shortname="obj_det_sensitivity"/>
+      <dl_settings name="Navigation_module_parameters">
+        <dl_setting var="Heading_constant" min="0" step=".05" max="1" shortname="K_heading_filter"/>
       </dl_settings>
     </dl_settings>
   </settings>

@@ -57,6 +57,10 @@
       <field name="gps_s" type="struct GpsState *"/>
     </message>
 
+    <message name="BURHAN_FILTER" id="29">
+      <field name="Max_section_idx" type="uint32_t" unit="idx"/>
+    </message>
+
     <message name="OPTICAL_FLOW" id="11">
       <field name="stamp" type="uint32_t" unit="us"/>
       <field name="flow_x" type="int16_t">Flow in x direction from the camera (in subpixels)</field>

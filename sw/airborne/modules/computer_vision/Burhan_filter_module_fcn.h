@@ -20,13 +20,11 @@
  */
 
 /**
- * @file modules/computer_vision/cv_detect_color_object.h
- * Assumes the color_object consists of a continuous color and checks
- * if you are over the defined color_object or not
+ * @file modules/computer_vision/Burhan_filter_module_fcn.h
  */
 
-#ifndef COLOR_OBJECT_DETECTOR_CV_H
-#define COLOR_OBJECT_DETECTOR_CV_H
+#ifndef BURHAN_FILTER_MODULE_FCN_H
+#define BURHAN_FILTER_MODULE_FCN_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -48,4 +46,4 @@ extern uint8_t draw_on_img;
 extern void burhan_filter_init(void);
 extern void burhan_filter_periodic(void);
 
-#endif /* COLOR_OBJECT_DETECTOR_CV_H */
+#endif /* BURHAN_FILTER_MODULE_FCN_H */

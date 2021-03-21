@@ -481,6 +481,13 @@
 #endif
 
 /*
+ * BURHAN_FILTER communication (message 27)
+*/
+#ifndef BURHAN_FILTER_ABI_ID
+#define BURHAN_FILTER_ABI_ID 1
+#endif
+
+/*
  * JOYSTICK message (used for payload or control, but not as a RC)
  */
 #ifndef JOYSTICK_ID

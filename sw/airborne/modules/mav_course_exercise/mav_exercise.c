@@ -53,8 +53,12 @@ float moveDistance = .5;                 // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 
-// Filter Settings
+uint32_t Section_max_idx;
+
 float object_detector_sensitivity = 0.18;
+
+// Filter Settings
+float Heading_constant = 0.3;
 
 //` needed to receive output from a separate module running on a parallel process`
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
@@ -75,7 +79,11 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
 #ifndef OPTICAL_FLOW_ID
 #define OPTICAL_FLOW_ID ABI_BROADCAST
 #endif
+
 static abi_event optical_flow_ev;
+
+
+
 static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
                             uint32_t __attribute__((unused)) stamp,
                             int16_t __attribute__((unused)) flow_x,
@@ -86,10 +94,23 @@ static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
                             float __attribute__((unused)) size_divergent) {
     divergence_value_exercise = size_divergent;
 }
+
+#ifndef BURHAN_FILTER_ABI_ID
+#define BURHAN_FILTER_ABI_ID ABI_BROADCAST
+#endif
+
+static abi_event burhan_filter_ev;
+
+static void burhan_filter_cb(uint8_t __attribute__((unused)) sender_id,
+                             uint32_t __attribute__((unused)) Max_section_idx) {
+    Section_max_idx = Max_section_idx;
+}
+
 void mav_exercise_init(void) {
   // bind our colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
   AbiBindMsgOPTICAL_FLOW(FLOW_OPTICFLOW_ID, &optical_flow_ev, optical_flow_cb);
+  AbiBindMsgBURHAN_FILTER(BURHAN_FILTER_ABI_ID, &burhan_filter_ev, burhan_filter_cb);
 }
 
 void mav_exercise_periodic(void) {
@@ -102,7 +123,10 @@ void mav_exercise_periodic(void) {
   // front_camera defined in airframe xml, with the video_capture module
   int32_t color_count_threshold = object_detector_sensitivity * filter_height * filter_width;
 
-  PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
+//  PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
+
+
+    PRINT("MAX_IDX_SECTION IS: %d \n", Section_max_idx);
   if(divergence_value_exercise>=0.02){
       PRINT("OPTICAL FLOW VALUE : %f  \n", divergence_value_exercise);
   }
