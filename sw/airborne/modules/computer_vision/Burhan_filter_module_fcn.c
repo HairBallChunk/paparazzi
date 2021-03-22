@@ -286,38 +286,38 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     float grn_count = Section_value[max_idx+2];
 
     ////// ALEX ADDITION REPLACES MAX_SECTION_IDX ////////
-    float minimum_green_threshold = 0.25;
-    float centroid_num = 0;
-	float centroid_den = 0;
+//    float minimum_green_threshold = 0.25;
+//    float centroid_num = 0;
+//	float centroid_den = 0;
+//
+//	float max_centroid_area = 0;
+//	float max_centroid_idx = 0;
+//
+//	for (int i = 0; i < 13; i++){
+//		if (Section_value[i] >= minimum_green_threshold){
+//			float idx = (float) i;
+//			centroid_num += idx * Section_value[i];
+//			centroid_den += Section_value[i];
+//		}
+//		else{
+//			if (centroid_den > max_centroid_area){
+//				max_centroid_area = centroid_den;
+//				max_centroid_idx = centroid_num / centroid_den;
+//			}
+//			centroid_num = 0;
+//			centroid_den = 0;
+//		}
+//	}
+//	int max_centroid_idx_returned = (int) (max_centroid_idx + 0.5); // we round then cast to int
 
-	float max_centroid_area = 0;
-	float max_centroid_idx = 0;
-
-	for (int i = 0; i < 13; i++){
-		if (Section_value[i] >= minimum_green_threshold){
-			float idx = (float) i;
-			centroid_num += idx * Section_value[i];
-			centroid_den += Section_value[i];
-		}
-		else{
-			if (centroid_den > max_centroid_area){
-				max_centroid_area = centroid_den;
-				max_centroid_idx = centroid_num / centroid_den;
-			}
-			centroid_num = 0;
-			centroid_den = 0;
-		}
-	}
-	int max_centroid_idx_returned = (int) (max_centroid_idx + 0.5); // we round then cast to int
-
-
-    uint32_t *local_pointer_int;
-    local_pointer_int = &vision_msg_in->section_idx;
-    *local_pointer_int = max_centroid_idx_returned +1;
 
 //    uint32_t *local_pointer_int;
 //    local_pointer_int = &vision_msg_in->section_idx;
-//    *local_pointer_int = max_idx +1;
+//    *local_pointer_int = max_centroid_idx_returned +1;
+
+    uint32_t *local_pointer_int;
+    local_pointer_int = &vision_msg_in->section_idx;
+    *local_pointer_int = max_idx +1;
 
     float *local_pointer_float;
     local_pointer_float = &vision_msg_in->green_frac;
