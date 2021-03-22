@@ -54,7 +54,7 @@ int16_t filter_height;
 int16_t filter_width;
 float divergence_value_exercise;  //divergence value needed for the obstacle avoidance algorithm
 int16_t obstacle_free_confidence;   // a measure of how certain we are that the way ahead is safe.
-float heading_increment = 10.f;//5.f;          // heading angle increment [deg]
+float heading_increment = 15.f;//5.f;          // heading angle increment [deg]
 float maxDistance = 2.25;               // max waypoint displacement [m]
 
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
@@ -298,10 +298,10 @@ uint8_t chooseRandomIncrementAvoidance(void)
 {
   // Randomly choose CW or CCW avoiding direction
   if (rand() % 2 == 0) {
-    heading_increment = 5.f;
+    heading_increment = heading_increment;
 //    VERBOSE_PRINT("Set avoidance increment to: %f\n", heading_increment);
   } else {
-    heading_increment = -5.f;
+    heading_increment = -heading_increment;
 //    VERBOSE_PRINT("Set avoidance increment to: %f\n", heading_increment);
   }
   return false;
