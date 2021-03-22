@@ -135,7 +135,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 
 
     section_value = (int) img->h/STEP/sections;
-    max_idx = sections - 1;
+    max_idx = 0;
     Section_value[max_idx] = 0;
 
 
