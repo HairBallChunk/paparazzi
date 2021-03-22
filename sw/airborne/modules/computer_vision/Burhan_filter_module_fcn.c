@@ -350,10 +350,11 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 
 	if(sum_center/5.f < min_green_thre*Section_value[max_idx]){
 		//failsafe_obstacle = 1
+		printf("#*($&@*(#$&@*(#$Y@UIRH@*O#&RYWEUIDH@#*OR&YWHEUIGD#&*O@REUIGL\n");
 		if (sum_left > sum_right){
-			max_idx = center - 2;
+			max_idx = center - 4;
 		}else{
-			max_idx = center + 2;
+			max_idx = center + 4;
 		}
 	}
 
