@@ -249,6 +249,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
         }
     }
 
+
     //SEE IF THERE ARE MORE THAN THREE CONSECUTIVE SECTIONS WITH VALUE BELOW A THRESHOLD:
     int counter_min = 0;
     int m_old = 0;
@@ -267,7 +268,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     else{
         failsafe_obstacle = 0;
     }
-//    fprintf(stderr,"FAILSAFE OBSTACLE IS : %d \n ",failsafe_obstacle);
+    fprintf(stderr,"FAILSAFE OBSTACLE IS : %d \n ",failsafe_obstacle);
 
     //// Burhan single gradient navigation
     for (int n = 0; n < sections - 2; n++){
@@ -328,6 +329,34 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 //    uint32_t *local_pointer_int;
 //    local_pointer_int = &vision_msg_in->section_idx;
 //    *local_pointer_int = max_centroid_idx_returned +1;
+
+    /////  ALEX BURHAN detect close poles
+
+	int center = (sections-1)/2; // center index of Section_value starting at 0
+	float sum_left, sum_right;
+	float sum_center;
+
+	for (int r = center - 2; r < center + 3; r++ ){
+		if (r<center){
+			sum_left += Section_value[r];
+		}
+		if (r > center){
+			sum_right += Section_value[r];
+		}
+		sum_center += Section_value[r];
+	}
+
+
+
+	if(sum_center/5.f < min_green_thre*Section_value[max_idx]){
+		//failsafe_obstacle = 1
+		if (sum_left > sum_right){
+			max_idx = center - 2;
+		}else{
+			max_idx = center + 2;
+		}
+	}
+
 
     uint32_t *local_pointer_int;
     local_pointer_int = &vision_msg_in->section_idx;
