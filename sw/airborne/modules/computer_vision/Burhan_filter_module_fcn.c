@@ -296,6 +296,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     float *local_pointer_float;
     local_pointer_float = &vision_msg_in->green_frac;
     *local_pointer_float = grn_count;
+    fprintf(stderr, "The value of green_count IN THE FILTER MODULE is = %f \n",grn_count);
 
     if(print_weights){
         fprintf(stderr,"WEIGHT FOR EACH SECTION :  ");

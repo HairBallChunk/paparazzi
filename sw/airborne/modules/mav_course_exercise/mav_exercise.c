@@ -115,7 +115,7 @@ static void burhan_filter_cb(uint8_t __attribute__((unused)) sender_id,
                              float __attribute__((unused)) green_fraction) {
     Section_max_idx = Max_section_idx;
     green_fraction_local = green_fraction;
-//    fprintf(stderr, "The value of green_count IN THE NAVIGATION MODULE is = %f \n",green_fraction_local);
+    fprintf(stderr, "The value of green_count IN THE NAVIGATION MODULE is = %f \n",green_fraction_local);
 }
 /*
  * Initialisation function, setting the colour filter, random seed and heading_increment
