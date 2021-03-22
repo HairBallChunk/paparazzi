@@ -37,7 +37,6 @@
 #include "subsystems/datalink/downlink.h"
 
 
-
 static pthread_mutex_t mutex;
 
 #ifndef BURHAN_FILTER_FPS1
@@ -59,7 +58,13 @@ uint8_t draw_on_img = 1;
 
 struct communicate_msg{
     uint32_t section_idx;
+    float green_count;
     bool updated;
+};
+
+struct vision_msg{
+	uint32_t section_idx;
+	float green_frac;
 };
 
 
@@ -76,7 +81,7 @@ static struct image_t *Burhan_fcn(struct image_t *img)
 {
 
   //Using the Burhan filter
-  uint32_t max_idx = Burhan_filter(img, draw_on_img, R_green_low, G_green_low, B_green_low,
+  vision_msg vision_out = Burhan_filter(img, draw_on_img, R_green_low, G_green_low, B_green_low,
                   R_green_hi, G_green_hi, B_green_hi, gray_threshold, thresh_lower, filter_height_cut, sections,
                   window_scale, print_weights);
 
@@ -107,11 +112,11 @@ void burhan_filter_init(void)
 }
 
 
-uint32_t Burhan_filter(struct image_t *img, uint8_t draw,
+struct vision_msg Burhan_filter(struct image_t *img, uint8_t draw,
                    uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
                    uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi,
                    uint8_t gray_threshold, uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections,
-                   float window_scale, uint8_t print_weights){
+                   float window_scale, uint8_t print_weights, float weight_green, float weight_grad){
 
     uint16_t ones_count = 0;
     uint16_t wrong_zeros = 0;
@@ -120,8 +125,12 @@ uint32_t Burhan_filter(struct image_t *img, uint8_t draw,
     uint16_t bin_array[img->w];
     uint16_t Green_pixel_value[(int) img->h/STEP];
     float Section_value[sections], weight = 0;
+    float gradients[sections - 2];
+    float weighted_sum[sections - 2];
     uint16_t idx_section = 0, section_count = 0;
     uint16_t section_value = 0, storage_value = 0, max_idx = 0;
+
+    struct vision_msg vision_out;
 
     section_value = (int) img->h/STEP/sections;
     max_idx = sections - 1;
@@ -217,18 +226,35 @@ uint32_t Burhan_filter(struct image_t *img, uint8_t draw,
             section_count++;
             if(section_count == section_value){
                 //Adding the weight
-                weight = 1.f - (fabs(idx_section + 1 - ceil(sections*0.5f))/ceil(sections*0.5f)) * window_scale;
-                Section_value[idx_section] = weight * storage_value/(section_value*(img->w - filter_height_cut));
+                //weight = 1.f - (fabs(idx_section + 1 - ceil(sections*0.5f))/ceil(sections*0.5f)) * window_scale;
+                //Section_value[idx_section] = weight * storage_value/(section_value*(img->w - filter_height_cut));
+                Section_value[idx_section] = storage_value/(section_value*(img->w - filter_height_cut));
+
                 storage_value = 0;
                 section_count = 0;
-                if(Section_value[idx_section] > Section_value[max_idx] ){
-                    max_idx = idx_section;
-                }
+//                if(Section_value[idx_section] > Section_value[max_idx] ){
+//                    max_idx = idx_section;
+//                }
                 idx_section++;
             }
         }
-
     }
+
+    for (int n = 0; n < sections - 2; n++){
+		gradients[n] = 1 - max(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
+
+		weighted_sum[n] = weight_green*gradients[n] + weight_grad*Section_value[n+1]; //store weighted sum in array
+
+		if(gradients[n] > gradients[max_idx]){
+			max_idx = n;
+		}
+	}
+
+    float grn_count = Section_value[max_idx+1];
+
+    vision_out.section_idx = max_idx;
+    vision_out.green_frac = grn_count;
+
     if(print_weights){
         fprintf(stderr,"WEIGHT FOR EACH SECTION :  ");
         for (int i = 0 ; i < sections ; i++){
@@ -238,7 +264,7 @@ uint32_t Burhan_filter(struct image_t *img, uint8_t draw,
         fprintf(stderr,"OUR MAX SECTION IS : %d \n ",max_idx + 1);
     }
 
-    return(max_idx + 1);
+    return(vision_out);
 }
 
 
