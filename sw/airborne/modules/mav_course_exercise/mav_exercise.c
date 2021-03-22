@@ -59,6 +59,7 @@ float object_detector_sensitivity = 0.18;
 
 // Filter Settings
 float Heading_constant = 0.3;
+float green_fraction_local = 0;
 
 //` needed to receive output from a separate module running on a parallel process`
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
@@ -104,8 +105,11 @@ static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
 static abi_event burhan_filter_ev;
 
 static void burhan_filter_cb(uint8_t __attribute__((unused)) sender_id,
-                             uint32_t __attribute__((unused)) Max_section_idx) {
+                             uint32_t __attribute__((unused)) Max_section_idx,
+                             float __attribute__((unused)) green_fraction) {
     Section_max_idx = Max_section_idx;
+    green_fraction_local = green_fraction;
+    fprintf(stderr, "The value of green_count IN THE NAVIGATION MODULE is = %f \n",green_fraction_local);
 }
 
 void mav_exercise_init(void) {

@@ -38,6 +38,8 @@ extern uint8_t filter_height_cut;
 extern uint8_t thresh_lower;
 extern uint8_t sections;
 extern float window_scale;
+extern float weight_green_input;
+extern float weight_grad_input;
 extern uint8_t print_weights;
 extern uint8_t draw_on_img;
 
