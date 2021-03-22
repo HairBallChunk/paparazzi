@@ -279,6 +279,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 			max_idx = n;
 		}
 	}
+    float grn_count = Section_value[max_idx+1];
 
 
     ///// Burhan double gradient navigation
