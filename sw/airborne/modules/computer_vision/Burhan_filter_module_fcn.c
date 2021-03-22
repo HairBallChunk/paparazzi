@@ -80,7 +80,6 @@ static struct image_t *Burhan_fcn(struct image_t *img)
                   R_green_hi, G_green_hi, B_green_hi, gray_threshold, thresh_lower, filter_height_cut, sections,
                   window_scale, print_weights);
 
-
   pthread_mutex_lock(&mutex);
   global_msg[0].section_idx = max_idx;
   global_msg[0].updated = true;
