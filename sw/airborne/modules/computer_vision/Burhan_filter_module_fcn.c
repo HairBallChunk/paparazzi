@@ -230,7 +230,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
                 //Adding the weight
                 //weight = 1.f - (fabs(idx_section + 1 - ceil(sections*0.5f))/ceil(sections*0.5f)) * window_scale;
                 //Section_value[idx_section] = weight * storage_value/(section_value*(img->w - filter_height_cut));
-                Section_value[idx_section] = storage_value/(section_value*(img->w - filter_height_cut));
+                Section_value[idx_section] = (float)storage_value/((float)(section_value*(img->w - filter_height_cut)));
 
                 storage_value = 0;
                 section_count = 0;
@@ -241,18 +241,16 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
             }
         }
     }
-    fprintf(stderr, "The value of the weigted sum is : ");
+
     for (int n = 0; n < sections - 2; n++){
-		gradients[n] = 1.f - fmax(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
+		gradients[n] = fmax(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
 
 		weighted_sum[n] = weight_green*gradients[n] + weight_grad*Section_value[n+1]; //store weighted sum in array
 
 		if(weighted_sum[n] > weighted_sum[max_idx]){
 			max_idx = n;
 		}
-        fprintf(stderr, "  %f  ",weighted_sum[n]);
 	}
-    fprintf(stderr, "\n ");
 
     float grn_count = Section_value[max_idx+1];
 
