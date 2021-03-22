@@ -40,7 +40,7 @@
 static pthread_mutex_t mutex;
 
 #ifndef BURHAN_FILTER_FPS1
-#define BURHAN_FILTER_FPS1 0 ///< Default FPS (zero means run at camera fps)
+#define BURHAN_FILTER_FPS1 10 ///< Default FPS (zero means run at camera fps)
 #endif
 
 //Burhan filter settings: KEEP THEM!!!
@@ -127,14 +127,14 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
                    uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
                    uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi,
                    uint8_t gray_threshold, uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections,
-                   float window_scale, uint8_t print_weights, float weight_green, float weight_grad, struct vision_msg *vision_msg_in){
+                   float window_scale, uint8_t print_weights, float weight_green, float weight_grad, struct vision_msg *vision_msg_in) {
 
     uint16_t ones_count = 0;
     uint16_t wrong_zeros = 0;
     uint8_t *buffer = img->buf;
     uint16_t next_y_value = 0;
     uint16_t bin_array[img->w];
-    uint16_t Green_pixel_value[(int) img->h/STEP];
+    uint16_t Green_pixel_value[(int) img->h / STEP];
     float Section_value[sections], weight = 0;
     float gradients[sections - 2];
     float d_gradients[sections - 4];
@@ -143,13 +143,13 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     uint16_t section_value = 0, storage_value = 0, max_idx = 0;
 
 
-    section_value = (int) img->h/STEP/sections;
+    section_value = (int) img->h / STEP / sections;
 
 
     for (uint16_t y = 0; y < img->h; y += STEP) {
         uint8_t cnt = 0;
         uint16_t green_count;
-        for (uint16_t x = 0; x < filter_height_cut ; x ++) {
+        for (uint16_t x = 0; x < img->w; x++) {
             // Check if the color is inside the specified values
             uint8_t *yp, *up, *vp;
             uint8_t pixel_b, pixel_g, pixel_r, pixel_value_local_gray;
@@ -168,49 +168,47 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
             }
             //Transpose YUV in RGB
 
-            pixel_b = (int) fmin(255.f , 1.164f * ( *yp - 16) + 2.018f * ( *up - 128));
-            pixel_g = (int) fmin(255.f , 1.164f * ( *yp - 16) - 0.813f * ( *vp - 128) - 0.391f * ( *up - 128));
-            pixel_r = (int) fmin(255.f , 1.164f * ( *yp - 16) + 1.596f * ( *vp - 128));
+            pixel_b = (int) fmin(255.f, 1.164f * (*yp - 16) + 2.018f * (*up - 128));
+            pixel_g = (int) fmin(255.f, 1.164f * (*yp - 16) - 0.813f * (*vp - 128) - 0.391f * (*up - 128));
+            pixel_r = (int) fmin(255.f, 1.164f * (*yp - 16) + 1.596f * (*vp - 128));
 
             //CREATE THE BITWISE_AND TOGETHER WITH THE INRANGE FCN
-            if ( (pixel_b >= B_green_low) && (pixel_b <= B_green_hi) &&
-                 (pixel_g >= G_green_low ) && (pixel_g <= G_green_hi ) &&
-                 (pixel_r >= R_green_low ) && (pixel_r <= R_green_hi )) {
+            if ((pixel_b >= B_green_low) && (pixel_b <= B_green_hi) &&
+                (pixel_g >= G_green_low) && (pixel_g <= G_green_hi) &&
+                (pixel_r >= R_green_low) && (pixel_r <= R_green_hi)) {
 //            if ( (*up >= 0) && (*up <= 120) &&
 //                 (*vp >= 0 ) && (*vp <= 120 ) &&
 //                 (*yp >= 50 ) && (*yp <= 200 )) {
                 //IMPLEMENTING THE BGR TO GRAYSCALE
                 pixel_value_local_gray = (int) 0.3f * pixel_r + 0.59f * pixel_g + 0.11f * pixel_b;
-            }
-            else{
+            } else {
                 pixel_value_local_gray = 0;
             }
             //IMPLEMENTING THE THRESHOLD FCN
-            if(pixel_value_local_gray >= gray_threshold){
-                cnt ++;
+            if (pixel_value_local_gray >= gray_threshold) {
+                cnt++;
                 bin_array[x] = 1;
-                if(draw){
+                if (draw) {
                     *yp = 255; // make pixel brighter in image
                 }
-            }
-            else {
+            } else {
                 bin_array[x] = 0;
             }
         }
 
         // FIND CONTINUOUS ZEROS FUNCTION
-        if(y == next_y_value) {
+        if (y == next_y_value) {
             wrong_zeros = 0;
             ones_count = 0;
             int count2;
-            for (int k = filter_height_cut; k < img->w ; k ++) {
+            for (int k = filter_height_cut; k < img->w; k++) {
                 uint8_t *yp;
                 count2 = img->w - k;
                 if (bin_array[count2] == 0) {
                     if (ones_count >= thresh_lower) {
-                        wrong_zeros ++;
+                        wrong_zeros++;
                         //Write the pixel to image
-                        if(draw) {
+                        if (draw) {
                             if (count2 % 2 == 0) {
                                 // Even x
                                 yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
@@ -221,9 +219,8 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
                             *yp = 255;
                         }
                     }
-                }
-                else if (bin_array[count2] == 1) {
-                    ones_count ++;
+                } else if (bin_array[count2] == 1) {
+                    ones_count++;
                 }
             }
             next_y_value += STEP;
@@ -233,15 +230,16 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
             //REFINE THE FILTER INTO BIGGER CELLS
             storage_value += wrong_zeros + cnt;
             section_count++;
-            if(section_count == section_value){
+            if (section_count == section_value) {
                 //Adding the weight
                 //weight = 1.f - (fabs(idx_section + 1 - ceil(sections*0.5f))/ceil(sections*0.5f)) * window_scale;
                 //Section_value[idx_section] = weight * storage_value/(section_value*(img->w - filter_height_cut));
-                Section_value[idx_section] = (float)storage_value/((float)(section_value*(img->w - filter_height_cut)));
+                Section_value[idx_section] =
+                        (float) storage_value / ((float) (section_value * (img->w - filter_height_cut)));
 
                 storage_value = 0;
                 section_count = 0;
-                if(Section_value[idx_section] > Section_value[max_idx] ){
+                if (Section_value[idx_section] > Section_value[max_idx]) {
                     max_idx = idx_section;
                 }
                 idx_section++;
@@ -253,52 +251,54 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     //SEE IF THERE ARE MORE THAN THREE CONSECUTIVE SECTIONS WITH VALUE BELOW A THRESHOLD:
     int counter_min = 0;
     int m_old = 0;
-    for (int m = 0 ; m < sections ; m++){
-        if(Section_value[m] < min_green_thre){
-            if((m - m_old) < 2)
-            counter_min++;
+    for (int m = 0; m < sections; m++) {
+        if (Section_value[m] < min_green_thre) {
+            if ((m - m_old) < 2)
+                counter_min++;
             m_old = m;
         }
     }
     max_idx = 0;
 
-    if(counter_min >= min_sections_failsafe){
+    if (counter_min >= min_sections_failsafe) {
         failsafe_obstacle = 1;
-    }
-    else{
+    } else {
         failsafe_obstacle = 0;
     }
-    fprintf(stderr,"FAILSAFE OBSTACLE IS : %d \n ",failsafe_obstacle);
+    fprintf(stderr, "FAILSAFE OBSTACLE IS : %d \n ", failsafe_obstacle);
 
-    //// Burhan single gradient navigation
-    for (int n = 0; n < sections - 2; n++){
-		gradients[n] = 1.f - fmax(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
-
-		weighted_sum[n] = weight_grad*gradients[n] + weight_green*Section_value[n+1]; //store weighted sum in array
-
-		if(weighted_sum[n] > weighted_sum[max_idx]){
-			max_idx = n;
-		}
-	}
-    float grn_count = Section_value[max_idx+1];
-
-
-    ///// Burhan double gradient navigation
-//    for (int n = 0; n < sections - 2; n++){
-//		gradients[n] = fmax(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
-//	}
+//    //// Burhan single gradient navigation
+//    for (int n = 0; n < sections - 2; n++) {
+//        gradients[n] = 1.f - fmax(fabs(Section_value[n + 1] - Section_value[n]),
+//                                  fabs(Section_value[n + 2] - Section_value[n + 1]));
 //
-//    for (int m = 0; m < sections - 4; m++){
-//    	d_gradients[m] = 1.f - fmax(fabs(gradients[m+1] - gradients[m]), fabs(gradients[m+2] - gradients[m+1]));
+//        weighted_sum[n] =
+//                weight_grad * gradients[n] + weight_green * Section_value[n + 1]; //store weighted sum in array
 //
-//    	weighted_sum[m] = weight_grad*d_gradients[m] + weight_green*Section_value[m+2]; //store weighted sum in array
-//
-//		if(weighted_sum[m] > weighted_sum[max_idx]){
-//			max_idx = m;
-//		}
+//        if (weighted_sum[n] > weighted_sum[max_idx]) {
+//            max_idx = n;
+//        }
 //    }
 //
-//    float grn_count = Section_value[max_idx+2];
+//    float grn_count = Section_value[max_idx+1];
+
+
+    /// Burhan double gradient navigation
+    for (int n = 0; n < sections - 2; n++){
+		gradients[n] = fmax(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
+	}
+
+    for (int m = 0; m < sections - 4; m++){
+    	d_gradients[m] = 1.f - fmax(fabs(gradients[m+1] - gradients[m]), fabs(gradients[m+2] - gradients[m+1]));
+
+    	weighted_sum[m] = weight_grad*d_gradients[m] + weight_green*Section_value[m+2]; //store weighted sum in array
+
+		if(weighted_sum[m] > weighted_sum[max_idx]){
+			max_idx = m;
+		}
+    }
+
+    float grn_count = Section_value[max_idx+2];
 
     ////// ALEX ADDITION REPLACES MAX_SECTION_IDX ////////
 //    float minimum_green_threshold = 0.25;
@@ -348,7 +348,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 
 
 
-	if(sum_center/5.f < min_green_thre*Section_value[max_idx]){
+	if(sum_center * .2f < min_green_thre*Section_value[max_idx]){
 		//failsafe_obstacle = 1
 		printf("#*($&@*(#$&@*(#$Y@UIRH@*O#&RYWEUIDH@#*OR&YWHEUIGD#&*O@REUIGL\n");
 		if (sum_left > sum_right){
@@ -380,6 +380,25 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
         fprintf(stderr,"OUR MAX SECTION IS : %d \n ",max_idx + 1);
     }
 
+    //Print the pixels on the image
+    int x_target = max_idx * section_value * STEP + STEP;
+    for (int k = 120; k < img->w; k++){
+        uint8_t *yp, *up, *vp;
+        if (k % 2 == 0) {
+            // Even x
+            up = &buffer[x_target * 2 * img->w + 2 * k];      // U
+            vp = &buffer[x_target * 2 * img->w + 2 * k + 2];  // V
+            yp = &buffer[x_target * 2 * img->w + 2 * k + 1];    // Y1
+        } else {
+            // Uneven x
+            up = &buffer[x_target * 2 * img->w + 2 * k - 2];  // U
+            vp = &buffer[x_target * 2 * img->w + 2 * k];      // V
+            yp = &buffer[x_target * 2 * img->w + 2 * k + 1];    // Y1
+        }
+        *up = 84;
+        *vp = 255;
+        *yp = 76;
+    }
 
 
 }
