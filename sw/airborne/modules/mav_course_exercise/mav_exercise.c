@@ -180,7 +180,7 @@ void mav_exercise_periodic(void)
       moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
         navigation_state = OUT_OF_BOUNDS;
-      } else if (green_fraction_local < green_fraction_threshold){
+      } else if (failsafe_obstacle_bool){
         navigation_state = OBSTACLE_FOUND;
       } else {
         moveWaypointForward(WP_GOAL, moveDistance);
@@ -209,7 +209,7 @@ void mav_exercise_periodic(void)
       increase_nav_heading(heading_increment);
 
       // make sure we have a couple of good readings before declaring the way safe
-      if (green_fraction_local >= green_fraction_threshold){
+      if (!failsafe_obstacle_bool){
         navigation_state = SAFE;
       }
       break;
