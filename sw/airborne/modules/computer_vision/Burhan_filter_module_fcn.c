@@ -269,21 +269,34 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     }
 //    fprintf(stderr,"FAILSAFE OBSTACLE IS : %d \n ",failsafe_obstacle);
 
+    //// Burhan single gradient navigation
     for (int n = 0; n < sections - 2; n++){
-		gradients[n] = fmax(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
+		gradients[n] = 1.f - fmax(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
+
+		weighted_sum[n] = weight_grad*gradients[n] + weight_green*Section_value[n+1]; //store weighted sum in array
+
+		if(weighted_sum[n] > weighted_sum[max_idx]){
+			max_idx = n;
+		}
 	}
 
-    for (int m = 0; m < sections - 4; m++){
-    	d_gradients[m] = 1.f - fmax(fabs(gradients[m+1] - gradients[m]), fabs(gradients[m+2] - gradients[m+1]));
 
-    	weighted_sum[m] = weight_grad*d_gradients[m] + weight_green*Section_value[m+2]; //store weighted sum in array
-
-		if(weighted_sum[m] > weighted_sum[max_idx]){
-			max_idx = m;
-		}
-    }
-
-    float grn_count = Section_value[max_idx+2];
+    ///// Burhan double gradient navigation
+//    for (int n = 0; n < sections - 2; n++){
+//		gradients[n] = fmax(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
+//	}
+//
+//    for (int m = 0; m < sections - 4; m++){
+//    	d_gradients[m] = 1.f - fmax(fabs(gradients[m+1] - gradients[m]), fabs(gradients[m+2] - gradients[m+1]));
+//
+//    	weighted_sum[m] = weight_grad*d_gradients[m] + weight_green*Section_value[m+2]; //store weighted sum in array
+//
+//		if(weighted_sum[m] > weighted_sum[max_idx]){
+//			max_idx = m;
+//		}
+//    }
+//
+//    float grn_count = Section_value[max_idx+2];
 
     ////// ALEX ADDITION REPLACES MAX_SECTION_IDX ////////
 //    float minimum_green_threshold = 0.25;
