@@ -42,6 +42,8 @@ extern float weight_green_input;
 extern float weight_grad_input;
 extern uint8_t print_weights;
 extern uint8_t draw_on_img;
+extern float min_green_thre;
+extern int min_sections_failsafe;
 
 
 // Module functions

@@ -57,16 +57,23 @@ uint8_t draw_on_img = 1;
 float weight_green_input = 0.5;
 float weight_grad_input = 0.5;
 
+//OBSTACLE FAILSAFE PARAMETERS
+uint8_t failsafe_obstacle = 0;
+float min_green_thre = 0.2;
+int min_sections_failsafe = 3;
+
 
 struct communicate_msg{
     uint32_t section_idx;
     float green_count;
+    uint8_t failsafe_obstacle;
     bool updated;
 };
 
 struct vision_msg{
 	uint32_t section_idx;
 	float green_frac;
+	uint8_t failsafe_obstacle_msg;
 };
 
 
@@ -90,6 +97,7 @@ struct image_t *Burhan_fcn(struct image_t *img)
   pthread_mutex_lock(&mutex);
   global_msg[0].section_idx = vision_in.section_idx;
   global_msg[0].green_count = vision_in.green_frac;
+  global_msg[0].failsafe_obstacle = vision_in.failsafe_obstacle_msg;
   global_msg[0].updated = true;
   pthread_mutex_unlock(&mutex);
 //  fprintf(stderr, "The value of green_count IN THE FUNCTION MODULE is = %f \n",global_msg[0].green_count);
@@ -243,11 +251,29 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
         }
     }
 
+    //SEE IF THERE ARE MORE THAN THREE CONSECUTIVE SECTIONS WITH VALUE BELOW A THRESHOLD:
+    int counter_min = 0;
+    int m_old = 0;
+    for (int m = 0 ; m < sections ; m++){
+        if(Section_value[m] < min_green_thre){
+            if((m - m_old) < 2)
+            counter_min++;
+            m_old = m;
+        }
+    }
+    if(counter_min >= min_sections_failsafe){
+        failsafe_obstacle = 1;
+    }
+    else{
+        failsafe_obstacle = 0;
+    }
+//    fprintf(stderr,"FAILSAFE OBSTACLE IS : %d \n ",failsafe_obstacle);
+
     for (int n = 0; n < sections - 2; n++){
 		gradients[n] = fmax(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
 	}
 
-    for (int m; m < sections - 4; m++){
+    for (int m = 0; m < sections - 4; m++){
     	d_gradients[m] = 1.f - fmax(fabs(gradients[m+1] - gradients[m]), fabs(gradients[m+2] - gradients[m+1]));
 
     	weighted_sum[m] = weight_grad*d_gradients[m] + weight_green*Section_value[m+2]; //store weighted sum in array
@@ -296,7 +322,10 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     float *local_pointer_float;
     local_pointer_float = &vision_msg_in->green_frac;
     *local_pointer_float = grn_count;
-    fprintf(stderr, "The value of green_count IN THE FILTER MODULE is = %f \n",grn_count);
+
+    uint8_t *local_pointer_uint8_t;
+    local_pointer_uint8_t = &vision_msg_in->failsafe_obstacle_msg;
+    *local_pointer_uint8_t = failsafe_obstacle;
 
     if(print_weights){
         fprintf(stderr,"WEIGHT FOR EACH SECTION :  ");
@@ -323,7 +352,8 @@ void burhan_filter_periodic(void)
 
   if(local_msg[0].updated){
       //ABI MESSAGE
-    AbiSendMsgBURHAN_FILTER(BURHAN_FILTER_ABI_ID, local_msg[0].section_idx , local_msg[0].green_count);
+    AbiSendMsgBURHAN_FILTER(BURHAN_FILTER_ABI_ID, local_msg[0].section_idx , local_msg[0].green_count,
+                            local_msg[0].failsafe_obstacle);
 //        local_filters[0].filter_width, local_filters[0].filter_height, local_filters[0].color_count, 0);
       local_msg[0].updated = false;
   }

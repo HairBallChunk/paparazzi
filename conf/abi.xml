@@ -60,6 +60,7 @@
     <message name="BURHAN_FILTER" id="29">
       <field name="Max_section_idx" type="uint32_t" unit="idx"/>
       <field name="green_fraction" type="float" unit="none"/>
+      <field name="failsafe_obstacle" type="uint8_t" unit="bool"/>
     </message>
 
     <message name="OPTICAL_FLOW" id="11">

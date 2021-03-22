@@ -24,10 +24,15 @@
         <dl_setting var="window_scale" min="0" step=".05" max="1" shortname="window_scale"/>
         <dl_setting var="weight_green_input" min="0" step=".05" max="1" shortname="weight_green"/>
         <dl_setting var="weight_grad_input" min="0" step=".05" max="1" shortname="weight_grad"/>
+        <dl_setting var="min_green_thre" min="0" step=".05" max="1" shortname="min_green_thre"/>
+        <dl_setting var="min_sections_failsafe" min="0" step="1" max="10" shortname="Sections_failsafe"/>
         <dl_setting var="print_weights" min="0" step="1" max="1" values="False|True" shortname="print_weights"/>
         <dl_setting var="draw_on_img"  min="0" step="1" max="1" values="False|True" shortname="draw_on_img" />
       </dl_settings>
-
+      <dl_settings name="Obstacles_failsafe_settings">
+        <dl_setting var="min_green_thre" min="0" step=".05" max="1" shortname="min_green_thre"/>
+        <dl_setting var="min_sections_failsafe" min="0" step="1" max="5" shortname="Sections_failsafe"/>
+      </dl_settings>
     </dl_settings>
   </settings>
 

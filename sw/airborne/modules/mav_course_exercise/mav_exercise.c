@@ -60,6 +60,7 @@ float maxDistance = 2.25;               // max waypoint displacement [m]
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 uint32_t Section_max_idx;
 float green_fraction_local;
+uint8_t failsafe_obstacle_bool;
 
 /*
  * This next section defines an ABI messaging event (http://wiki.paparazziuav.org/wiki/ABI), necessary
@@ -112,10 +113,12 @@ static abi_event burhan_filter_ev;
 
 static void burhan_filter_cb(uint8_t __attribute__((unused)) sender_id,
                              uint32_t __attribute__((unused)) Max_section_idx,
-                             float __attribute__((unused)) green_fraction) {
+                             float __attribute__((unused)) green_fraction,
+                             uint8_t __attribute__((unused)) failsafe_obstacle) {
     Section_max_idx = Max_section_idx;
     green_fraction_local = green_fraction;
-    fprintf(stderr, "The value of green_count IN THE NAVIGATION MODULE is = %f \n",green_fraction_local);
+    failsafe_obstacle_bool = failsafe_obstacle;
+    fprintf(stderr, "FAILSAFE IS = %d \n",failsafe_obstacle);
 }
 /*
  * Initialisation function, setting the colour filter, random seed and heading_increment
@@ -187,7 +190,9 @@ void mav_exercise_periodic(void)
       }
 
       break;
+
     case OBSTACLE_FOUND:
+
 		PRINT("OBSTACLE FOUND: green_fraction_local/green_fraction_threshold = %f/%f \n", green_fraction_local, green_fraction_threshold);
       // stop
       waypoint_move_here_2d(WP_GOAL);
