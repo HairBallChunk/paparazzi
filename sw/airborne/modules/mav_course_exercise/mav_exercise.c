@@ -118,7 +118,7 @@ static void burhan_filter_cb(uint8_t __attribute__((unused)) sender_id,
     Section_max_idx = Max_section_idx;
     green_fraction_local = green_fraction;
     failsafe_obstacle_bool = failsafe_obstacle;
-    fprintf(stderr, "FAILSAFE IS = %d \n",failsafe_obstacle);
+//    fprintf(stderr, "FAILSAFE IS = %d \n",failsafe_obstacle);
 }
 /*
  * Initialisation function, setting the colour filter, random seed and heading_increment
@@ -193,7 +193,7 @@ void mav_exercise_periodic(void)
 
     case OBSTACLE_FOUND:
 
-		PRINT("OBSTACLE FOUND: green_fraction_local/green_fraction_threshold = %f/%f \n", green_fraction_local, green_fraction_threshold);
+		PRINT("OBSTACLE FOUND: FAILSAFE OBSTACLE VALUE IS = %d \n",failsafe_obstacle_bool);
       // stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
@@ -205,7 +205,7 @@ void mav_exercise_periodic(void)
 
       break;
     case SEARCH_FOR_SAFE_HEADING:
-		PRINT("SEARCH_FOR_SAFE_HEADING: green_fraction_local/green_fraction_threshold = %f/%f \n", green_fraction_local, green_fraction_threshold);
+		PRINT("SEARCH_FOR_SAFE_HEADING: FAILSAFE OBSTACLE VALUE IS = %d \n",failsafe_obstacle_bool);
       increase_nav_heading(heading_increment);
 
       // make sure we have a couple of good readings before declaring the way safe

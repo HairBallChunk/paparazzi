@@ -144,8 +144,6 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 
 
     section_value = (int) img->h/STEP/sections;
-    max_idx = sections - 1;
-    Section_value[max_idx] = 0;
 
 
     for (uint16_t y = 0; y < img->h; y += STEP) {
@@ -209,7 +207,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
                 uint8_t *yp;
                 count2 = img->w - k;
                 if (bin_array[count2] == 0) {
-                    if (ones_count > thresh_lower) {
+                    if (ones_count >= thresh_lower) {
                         wrong_zeros ++;
                         //Write the pixel to image
                         if(draw) {
@@ -243,9 +241,9 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 
                 storage_value = 0;
                 section_count = 0;
-//                if(Section_value[idx_section] > Section_value[max_idx] ){
-//                    max_idx = idx_section;
-//                }
+                if(Section_value[idx_section] > Section_value[max_idx] ){
+                    max_idx = idx_section;
+                }
                 idx_section++;
             }
         }
@@ -261,6 +259,8 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
             m_old = m;
         }
     }
+    max_idx = 0;
+
     if(counter_min >= min_sections_failsafe){
         failsafe_obstacle = 1;
     }
