@@ -162,16 +162,16 @@ void mav_exercise_periodic(void)
   float N_bins;
   float n_offset;
   float fov_h_heading_calc;
-  float d_heading;
-  int d_heading_deg;
+  float d_heading; //rad
+  int d_heading_deg; //deg
   float green_fraction_threshold = 0.2;
 
   switch (navigation_state){
     case SAFE:
     	N_bins = 13.f; //n_bins
-		n_offset = Section_max_idx * 1.f; // px_offset
-		fov_h_heading_calc = 80.0f * 3.14f / 180.0f; // estimated horizontal field of view
-		d_heading = (2*n_offset- N_bins - 1) / (N_bins+1) * fov_h_heading_calc/2;
+		n_offset = Section_max_idx * 1.f; // px_offset cast to float
+		fov_h_heading_calc = 80.0f * 3.14f / 180.0f; // estimated horizontal field of view in rad
+		d_heading = (2*n_offset- N_bins - 1) / (N_bins+1) * fov_h_heading_calc/2; // convert the bin idx to a heading in rad
       // Move waypoint forward
 
       moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
@@ -188,7 +188,7 @@ void mav_exercise_periodic(void)
 
       break;
     case OBSTACLE_FOUND:
-		PRINT("OBSTACLE FOUND: green_fraction_local = %i \n");
+		PRINT("OBSTACLE FOUND: green_fraction_local/green_fraction_threshold = %f/%f \n", green_fraction_local, green_fraction_threshold);
       // stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
@@ -200,7 +200,7 @@ void mav_exercise_periodic(void)
 
       break;
     case SEARCH_FOR_SAFE_HEADING:
-		PRINT("SEARCH_FOR_SAFE_HEADING: green_fraction_local = %i \n");
+		PRINT("SEARCH_FOR_SAFE_HEADING: green_fraction_local/green_fraction_threshold = %f/%f \n", green_fraction_local, green_fraction_threshold);
       increase_nav_heading(heading_increment);
 
       // make sure we have a couple of good readings before declaring the way safe
