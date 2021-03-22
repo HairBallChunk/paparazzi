@@ -250,7 +250,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     for (int m; m < sections - 4; m++){
     	d_gradients[m] = 1.f - fmax(fabs(gradients[m+1] - gradients[m]), fabs(gradients[m+2] - gradients[m+1]));
 
-    	weighted_sum[m] = weight_green*d_gradients[m] + weight_grad*Section_value[m+2]; //store weighted sum in array
+    	weighted_sum[m] = weight_grad*d_gradients[m] + weight_green*Section_value[m+2]; //store weighted sum in array
 
 		if(weighted_sum[m] > weighted_sum[max_idx]){
 			max_idx = m;
