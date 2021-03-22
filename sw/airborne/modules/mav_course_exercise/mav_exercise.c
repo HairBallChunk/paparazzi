@@ -60,6 +60,7 @@ float maxDistance = 2.25;               // max waypoint displacement [m]
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 uint32_t Section_max_idx;
 float green_fraction_local;
+float Heading_constant = 1;
 
 /*
  * This next section defines an ABI messaging event (http://wiki.paparazziuav.org/wiki/ABI), necessary
@@ -171,7 +172,7 @@ void mav_exercise_periodic(void)
     	N_bins = 13.f; //n_bins
 		n_offset = Section_max_idx * 1.f; // px_offset
 		fov_h_heading_calc = 80.0f * 3.14f / 180.0f; // estimated horizontal field of view
-		d_heading = (2*n_offset- N_bins - 1) / (N_bins+1) * fov_h_heading_calc/2;
+		d_heading = (2*n_offset- N_bins - 1) / (N_bins+1) * fov_h_heading_calc * .5f * Heading_constant;
       // Move waypoint forward
 
       moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
