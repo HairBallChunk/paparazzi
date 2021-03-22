@@ -129,6 +129,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     uint16_t Green_pixel_value[(int) img->h/STEP];
     float Section_value[sections], weight = 0;
     float gradients[sections - 2];
+    float d_gradients[sections - 4];
     float weighted_sum[sections - 2];
     uint16_t idx_section = 0, section_count = 0;
     uint16_t section_value = 0, storage_value = 0, max_idx = 0;
@@ -244,15 +245,19 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 
     for (int n = 0; n < sections - 2; n++){
 		gradients[n] = fmax(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
-
-		weighted_sum[n] = weight_green*gradients[n] + weight_grad*Section_value[n+1]; //store weighted sum in array
-
-		if(weighted_sum[n] > weighted_sum[max_idx]){
-			max_idx = n;
-		}
 	}
 
-    float grn_count = Section_value[max_idx+1];
+    for (int m; m < sections - 4; m++){
+    	d_gradients[m] = 1.f - fmax(fabs(gradients[m+1] - gradients[m]), fabs(gradients[m+2] - gradients[m+1]));
+
+    	weighted_sum[m] = weight_green*d_gradients[m] + weight_grad*Section_value[m+2]; //store weighted sum in array
+
+		if(weighted_sum[m] > weighted_sum[max_idx]){
+			max_idx = m;
+		}
+    }
+
+    float grn_count = Section_value[max_idx+2];
 
     uint32_t *local_pointer_int;
     local_pointer_int = &vision_msg_in->section_idx;
