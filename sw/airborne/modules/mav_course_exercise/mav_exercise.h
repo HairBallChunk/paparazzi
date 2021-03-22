@@ -22,7 +22,7 @@
 #define PAPARAZZI_MAV_EXERCISE_H
 
 // settings
-extern float Heading_constant;
+//extern float Heading_constant;
 
 extern void mav_exercise_init(void);
 extern void mav_exercise_periodic(void);
