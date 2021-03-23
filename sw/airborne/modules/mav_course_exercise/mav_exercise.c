@@ -62,7 +62,7 @@ uint32_t Section_max_idx;
 float green_fraction_local;
 uint8_t failsafe_obstacle_bool;
 int count_obstacle_found = 0;
-
+int count_avoidance = 4;
 /*
  * This next section defines an ABI messaging event (http://wiki.paparazziuav.org/wiki/ABI), necessary
  * any time data calculated in another module needs to be accessed. Including the file where this external
@@ -170,46 +170,58 @@ void mav_exercise_periodic(void)
   int d_heading_deg; //deg
   float green_fraction_threshold = 0.2;
 
-  switch (navigation_state){
-    case SAFE:
+  switch (navigation_state) {
+      case SAFE:
 
-      d_heading = (2*n_offset- N_bins - 1) / (N_bins+1) * fov_h_heading_calc/2; // convert the bin idx to a heading in rad
-      // Move waypoint forward
-      moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
-      if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
-        navigation_state = OUT_OF_BOUNDS;
-      } else if (failsafe_obstacle_bool){
-        navigation_state = OBSTACLE_FOUND;
-        count_obstacle_found = 0;
-      } else {
-        moveWaypointForward(WP_GOAL, moveDistance);
-        d_heading_deg = (int) (d_heading * 180. / 3.14);
-        increase_nav_heading(d_heading_deg);
-        PRINT("SAFE->ELSE: n_offset/d_heading = %f/%i[deg]\n", n_offset, d_heading_deg);
-      }
+          d_heading = (2 * n_offset - N_bins - 1) / (N_bins + 1) * fov_h_heading_calc /
+                      2; // convert the bin idx to a heading in rad
+          // Move waypoint forward
+          moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
+          if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
+              navigation_state = OUT_OF_BOUNDS;
+          } else if (failsafe_obstacle_bool) {
+              navigation_state = OBSTACLE_FOUND;
+              count_obstacle_found = 0;
+          } else {
+              moveWaypointForward(WP_GOAL, moveDistance);
+              d_heading_deg = (int) (d_heading * 180. / 3.14);
+              increase_nav_heading(d_heading_deg);
+              PRINT("SAFE->ELSE: n_offset/d_heading = %f/%i[deg]\n", n_offset, d_heading_deg);
+          }
 
-      break;
+          break;
 
-    case OBSTACLE_FOUND:
-      PRINT("OBSTACLE FOUND: FAILSAFE OBSTACLE VALUE IS = %d \n",failsafe_obstacle_bool);
+      case OBSTACLE_FOUND:
+          PRINT("OBSTACLE FOUND: FAILSAFE OBSTACLE VALUE IS = %d \n", failsafe_obstacle_bool);
 
-      moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
-      
-      //Just adjust your heading
-//      d_heading = (2*n_offset- N_bins - 1) / (N_bins+1) * fov_h_heading_calc/2;
-//      d_heading_deg = (int) (d_heading * 180. / 3.14);
-//      increase_nav_heading(d_heading_deg);
-//      if(!failsafe_obstacle_bool){
+          moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
+
+          //Just adjust your heading
+          if (failsafe_obstacle_bool) {
+              d_heading = (2 * n_offset - N_bins - 1) / (N_bins + 1) * fov_h_heading_calc / 2;
+              moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
+          } else {
+              moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
+          }
+
+
           count_obstacle_found++;
-          if(count_obstacle_found > 1){
+
+          if (count_obstacle_found > count_avoidance) {
               navigation_state = SAFE;
           }
-          else if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_GOAL))){
+          if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_GOAL))) {
               navigation_state = OUT_OF_BOUNDS;
           }
-          else{
+
+          if (failsafe_obstacle_bool) {
+              d_heading_deg = (int) (d_heading * 180. / 3.14);
+              increase_nav_heading(d_heading_deg);
+              moveWaypointForward(WP_GOAL, moveDistance);
+          } else {
               moveWaypointForward(WP_GOAL, moveDistance);
           }
+
 //      }
 
 //      waypoint_move_here_2d(WP_GOAL);

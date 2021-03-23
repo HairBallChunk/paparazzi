@@ -23,8 +23,10 @@
 
 // settings
 //extern float Heading_constant;
+extern int count_avoidance;
 
 extern void mav_exercise_init(void);
 extern void mav_exercise_periodic(void);
+
 
 #endif //PAPARAZZI_MAV_EXERCISE_H
