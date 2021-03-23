@@ -140,7 +140,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     float d_gradients[sections - 4];
     float weighted_sum[sections - 2];
     uint16_t idx_section = 0, section_count = 0;
-    uint16_t section_value = 0, storage_value = 0, max_idx = 0;
+    uint16_t section_value = 0, storage_value = 0, max_idx = (sections-1)/2;
 
 
     section_value = (int) img->h / STEP / sections; // This is the number of STEPS in a section.
