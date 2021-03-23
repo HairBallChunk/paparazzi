@@ -143,7 +143,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     uint16_t section_value = 0, storage_value = 0, max_idx = 0;
 
 
-    section_value = (int) img->h / STEP / sections;
+    section_value = (int) img->h / STEP / sections; // This is the number of STEPS in a section.
 
 
     for (uint16_t y = 0; y < img->h; y += STEP) {
@@ -186,7 +186,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
             }
             //IMPLEMENTING THE THRESHOLD FCN
             if (pixel_value_local_gray >= gray_threshold) {
-                cnt++;
+                cnt++; //count the green pixels above the gray threshold
                 bin_array[x] = 1;
                 if (draw) {
                     *yp = 255; // make pixel brighter in image
@@ -197,77 +197,59 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
         }
 
         // FIND CONTINUOUS ZEROS FUNCTION
-        if (y == next_y_value) {
-            wrong_zeros = 0;
-            ones_count = 0;
-            int count2;
-            for (int k = filter_height_cut; k < img->w; k++) {
-                uint8_t *yp;
-                count2 = img->w - k;
-                if (bin_array[count2] == 0) {
-                    if (ones_count >= thresh_lower) {
-                        wrong_zeros++;
-                        //Write the pixel to image
-                        if (draw) {
-                            if (count2 % 2 == 0) {
-                                // Even x
-                                yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
-                            } else {
-                                // Uneven x
-                                yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
-                            }
-                            *yp = 255;
-                        }
-                    }
-                } else if (bin_array[count2] == 1) {
-                    ones_count++;
-                }
-            }
-            next_y_value += STEP;
-            Green_pixel_value[green_count] = wrong_zeros + cnt;
-            green_count++;
+		wrong_zeros = 0;
+		ones_count = 0;
+		int count2;
+		for (int k = filter_height_cut; k < img->w; k++) {
+			uint8_t *yp;
+			count2 = img->w - k;
+			if (bin_array[count2] == 0) {
+				if (ones_count >= thresh_lower) {
+					wrong_zeros++;
+					//Write the pixel to image
+					if (draw) {
+						if (count2 % 2 == 0) {
+							// Even x
+							yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
+						} else {
+							// Uneven x
+							yp = &buffer[y * 2 * img->w + 2 * count2 + 1];
+						}
+						*yp = 255;
+					}
+				}
+			} else if (bin_array[count2] == 1) {
+				ones_count++;
+			}
+		}
+		//next_y_value += STEP;
 
-            //REFINE THE FILTER INTO BIGGER CELLS
-            storage_value += wrong_zeros + cnt;
-            section_count++;
-            if (section_count == section_value) {
-                //Adding the weight
-                //weight = 1.f - (fabs(idx_section + 1 - ceil(sections*0.5f))/ceil(sections*0.5f)) * window_scale;
-                //Section_value[idx_section] = weight * storage_value/(section_value*(img->w - filter_height_cut));
-                Section_value[idx_section] =
-                        (float) storage_value / ((float) (section_value * (img->w - filter_height_cut)));
+		Green_pixel_value[green_count] = wrong_zeros + cnt;
+		green_count++;
 
-                storage_value = 0;
-                section_count = 0;
-                if (Section_value[idx_section] > Section_value[max_idx]) {
-                    max_idx = idx_section;
-                }
-                idx_section++;
-            }
-        }
+		//REFINE THE FILTER INTO BIGGER CELLS
+		storage_value += wrong_zeros + cnt;
+		section_count++;
+		if (section_count == section_value) {
+			//Adding the weight
+			//weight = 1.f - (fabs(idx_section + 1 - ceil(sections*0.5f))/ceil(sections*0.5f)) * window_scale;
+			//Section_value[idx_section] = weight * storage_value/(section_value*(img->w - filter_height_cut));
+			Section_value[idx_section] = (float) storage_value / ((float) (section_value * (img->w - filter_height_cut))); // Normalize the green count in section
+																														   // to the range 0.0 --> 1.0
+			storage_value = 0; // reset counts
+			section_count = 0;
+			if (Section_value[idx_section] > Section_value[max_idx]) {
+				max_idx = idx_section; //find section with most green pixels
+			}
+			idx_section++;
+		}
+
     }
 
 
-    //SEE IF THERE ARE MORE THAN THREE CONSECUTIVE SECTIONS WITH VALUE BELOW A THRESHOLD:
-    int counter_min = 0;
-    int m_old = 0;
-    for (int m = 0; m < sections; m++) {
-        if (Section_value[m] < min_green_thre) {
-            if ((m - m_old) < 2)
-                counter_min++;
-            m_old = m;
-        }
-    }
-    max_idx = 0;
+//======================================================================= Navigation algorithms ===============================================================================//
 
-    if (counter_min >= min_sections_failsafe) {
-        failsafe_obstacle = 1;
-    } else {
-        failsafe_obstacle = 0;
-    }
-    fprintf(stderr, "FAILSAFE OBSTACLE IS : %d \n ", failsafe_obstacle);
-
-//    //// Burhan single gradient navigation
+////======================================Burhan single gradient navigation============================================//
 //    for (int n = 0; n < sections - 2; n++) {
 //        gradients[n] = 1.f - fmax(fabs(Section_value[n + 1] - Section_value[n]),
 //                                  fabs(Section_value[n + 2] - Section_value[n + 1]));
@@ -283,7 +265,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 //    float grn_count = Section_value[max_idx+1];
 
 
-    /// Burhan double gradient navigation
+//// ======================================Burhan double gradient navigation=============================================//
     for (int n = 0; n < sections - 2; n++){
 		gradients[n] = fmax(fabs(Section_value[n+1] - Section_value[n]), fabs(Section_value[n+2] - Section_value[n+1]));
 	}
@@ -300,7 +282,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 
     float grn_count = Section_value[max_idx+2];
 
-    ////// ALEX ADDITION REPLACES MAX_SECTION_IDX ////////
+////===================================ALEX ADDITION REPLACES MAX_SECTION_IDX===============================================//
 //    float minimum_green_threshold = 0.25;
 //    float centroid_num = 0;
 //	float centroid_den = 0;
@@ -330,33 +312,88 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 //    local_pointer_int = &vision_msg_in->section_idx;
 //    *local_pointer_int = max_centroid_idx_returned +1;
 
-    /////  ALEX BURHAN detect close poles
+//======================================================================= Navigation Fail Safes ===============================================================================//
+
+////=======================================ALEX BURHAN detect close poles - fail safe================================================//
+
+//	int center = (sections-1)/2; // center index of Section_value starting at 0
+//	float sum_left, sum_right;
+//	float sum_total;
+//
+//	for (int r = center - 2; r < center + 2+1; r++ ){
+//		if (r<center){
+//			sum_left += Section_value[r];
+//		}
+//		if (r > center){
+//			sum_right += Section_value[r];
+//		}
+//		sum_total += Section_value[r];
+//	}
+//
+//
+//
+//	if(sum_total * .2f < min_green_thre*Section_value[max_idx]){
+//		//failsafe_obstacle = 1
+//		printf("#*($&@*(#$&@*(#$Y@UIRH@*O#&RYWEUIDH@#*OR&YWHEUIGD#&*O@REUIGL\n");
+//		if (sum_left > sum_right){
+//			max_idx = center - 4;
+//		}else{
+//			max_idx = center + 4;
+//		}
+//	}
+
+////======================================= BURHAN detect close poles - fail safe================================================//
 
 	int center = (sections-1)/2; // center index of Section_value starting at 0
 	float sum_left, sum_right;
-	float sum_center;
+	float sum_total;
+	int bins_to_check = 5;
+	float bin_threshold = 0.5;
+	int close_pole = 0;
 
-	for (int r = center - 2; r < center + 3; r++ ){
+	for (int r = center - bins_to_check; r < center + bins_to_check+1; r++ ){
 		if (r<center){
 			sum_left += Section_value[r];
 		}
 		if (r > center){
 			sum_right += Section_value[r];
 		}
-		sum_center += Section_value[r];
+		sum_total += Section_value[r]; // calculating the total of these pixels but not using it. Leaving it there in case it is needed
 	}
 
-
-
-	if(sum_center * .2f < min_green_thre*Section_value[max_idx]){
-		//failsafe_obstacle = 1
-		printf("#*($&@*(#$&@*(#$Y@UIRH@*O#&RYWEUIDH@#*OR&YWHEUIGD#&*O@REUIGL\n");
-		if (sum_left > sum_right){
-			max_idx = center - 4;
-		}else{
-			max_idx = center + 4;
-		}
+	if (sum_left < bin_threshold*sum_right){
+		printf("RIGHT!! RIGHT!! RIGHT!! RIGHT!! RIGHT!! RIGHT!! RIGHT!! RIGHT!! RIGHT!! RIGHT!! ");
+		max_idx = center + 4;
+		close_pole = 1
 	}
+	else if (sum_right < bin_threshold*sum_left){
+		printf("LEFT!!  LEFT!!  LEFT!!  LEFT!!  LEFT!!  LEFT!!  LEFT!!  LEFT!!  LEFT!!  LEFT!!  ");
+		max_idx = center - 4;
+		close_pole = 1;
+	}
+
+	failsafe_obstacle = 0; //so that we never enter that weird obstacle avoider case because the vision part is alreadt taking care of that
+
+////========================================Allesandro consecutive sections fail safe======================================//
+
+//	//SEE IF THERE ARE MORE THAN THREE CONSECUTIVE SECTIONS WITH VALUE BELOW A THRESHOLD:
+//	int counter_min = 0;
+//	int m_old = 0;
+//	for (int m = 0; m < sections; m++) {
+//		if (Section_value[m] < min_green_thre) {
+//			if ((m - m_old) < 2)
+//				counter_min++;
+//			m_old = m;
+//		}
+//	}
+//	max_idx = 0;
+//
+//	if (counter_min >= min_sections_failsafe) {
+//		failsafe_obstacle = 1;
+//	} else {
+//		failsafe_obstacle = 0;
+//	}
+//	fprintf(stderr, "FAILSAFE OBSTACLE IS : %d \n ", failsafe_obstacle);
 
 
     uint32_t *local_pointer_int;
@@ -380,9 +417,9 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
         fprintf(stderr,"OUR MAX SECTION IS : %d \n ",max_idx + 1);
     }
 
-    //Print the pixels on the image
+    //Print target heading on the image
     int x_target = max_idx * section_value * STEP + STEP;
-    for (int k = 120; k < img->w; k++){
+    for (int k = 0; k < img->w; k++){
         uint8_t *yp, *up, *vp;
         if (k % 2 == 0) {
             // Even x
@@ -398,6 +435,11 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
         *up = 84;
         *vp = 255;
         *yp = 76;
+        if (close_pole){ ///Draw a blue line if in close pole fail safe mode
+        	*up = 255;
+        	*vp = 107;
+        	*yp = 29;
+        }
     }
 
 
