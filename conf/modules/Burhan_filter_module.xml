@@ -21,13 +21,13 @@
         <dl_setting var="filter_height_cut" min="0" step="1" max="240" shortname="filter_cut"/>
         <dl_setting var="thresh_lower" min="0" step="1" max="100" shortname="min_ones_thres"/>
         <dl_setting var="sections" min="1" step="1" max="50" shortname="N_sections"/>
-        <dl_setting var="window_scale" min="0" step=".05" max="1" shortname="window_scale"/>
         <dl_setting var="weight_green_input" min="0" step=".05" max="1" shortname="weight_green"/>
         <dl_setting var="weight_grad_input" min="0" step=".05" max="1" shortname="weight_grad"/>
         <dl_setting var="print_weights" min="0" step="1" max="1" values="False|True" shortname="print_weights"/>
         <dl_setting var="draw_on_img"  min="0" step="1" max="1" values="False|True" shortname="draw_on_img" />
       </dl_settings>
       <dl_settings name="Obstacles_failsafe_settings">
+        <dl_setting var="double_gradient_bool" min="0" step="1" max="1" values="False|True" shortname="double_grad_active"/>
         <dl_setting var="min_green_thre" min="0" step=".05" max="1" shortname="min_green_thre"/>
         <dl_setting var="bin_threshold" min="0" step=".05" max="1" shortname="bin_threshold"/>
         <dl_setting var="min_sections_failsafe" min="0" step="1" max="30" shortname="Sections_failsafe"/>

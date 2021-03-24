@@ -83,28 +83,9 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
   filter_height = pixel_height;
   filter_width = pixel_width;
 }
-static uint8_t calculate_offset2waypoint(struct EnuCoor_i *new_coor, float distanceMeters, float d_heading);
 uint8_t moveWaypoint_offset2waypoint(uint8_t waypoint, float distanceMeters, float d_heading);
 
-//` needed to receive output from a separate module running on a parallel process (Opticalflow)
-#ifndef OPTICAL_FLOW_ID
-#define OPTICAL_FLOW_ID ABI_BROADCAST
-#endif
 
-static abi_event optical_flow_ev;
-
-
-
-static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
-                            uint32_t __attribute__((unused)) stamp,
-                            int16_t __attribute__((unused)) flow_x,
-                            int16_t __attribute__((unused)) flow_y,
-                            int16_t __attribute__((unused)) flow_der_x,
-                            int16_t __attribute__((unused)) flow_der_y,
-                            float __attribute__((unused)) quality,
-                            float __attribute__((unused)) size_divergent) {
-    divergence_value_exercise = size_divergent;
-}
 
 #ifndef BURHAN_FILTER_ABI_ID
 #define BURHAN_FILTER_ABI_ID ABI_BROADCAST
@@ -132,7 +113,7 @@ void mav_exercise_init(void)
 
   // bind our colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
-  AbiBindMsgOPTICAL_FLOW(FLOW_OPTICFLOW_ID, &optical_flow_ev, optical_flow_cb);
+//  AbiBindMsgOPTICAL_FLOW(FLOW_OPTICFLOW_ID, &optical_flow_ev, optical_flow_cb);
   AbiBindMsgBURHAN_FILTER(BURHAN_FILTER_ABI_ID, &burhan_filter_ev, burhan_filter_cb);
 }
 
@@ -165,9 +146,9 @@ void mav_exercise_periodic(void)
   float N_bins = (float) sections; //n_bins
   float n_offset = Section_max_idx * 1.f; // px_offset cast to float;
   float fov_h_heading_calc = 80.0f * 3.14f / 180.0f; // estimated horizontal field of view in rad;
-  float d_heading; //rad
-  int d_heading_deg; //deg
-  float green_fraction_threshold = 0.2;
+  float d_heading = 0; //rad
+  int d_heading_deg = 0; //deg
+//  float green_fraction_threshold = 0.2;
 
   switch (navigation_state) {
       case SAFE:
@@ -214,16 +195,6 @@ void mav_exercise_periodic(void)
 
           moveWaypointForward(WP_GOAL, moveDistance);
 
-//      }
-
-//      waypoint_move_here_2d(WP_GOAL);
-//      waypoint_move_here_2d(WP_TRAJECTORY);
-
-      // randomly select new search direction
-//      chooseRandomIncrementAvoidance();
-
-//      navigation_state = SEARCH_FOR_SAFE_HEADING;
-
       break;
     case SEARCH_FOR_SAFE_HEADING:
 		PRINT("SEARCH_FOR_SAFE_HEADING: FAILSAFE OBSTACLE VALUE IS = %d \n",failsafe_obstacle_bool);
@@ -242,10 +213,8 @@ void mav_exercise_periodic(void)
       if (InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
         // add offset to head back into arena
         increase_nav_heading(heading_increment);
-
         // reset safe counter
         obstacle_free_confidence = 0;
-
         // ensure direction is safe before continuing
         navigation_state = SEARCH_FOR_SAFE_HEADING;
       }
@@ -295,9 +264,6 @@ uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters)
   // Now determine where to place the waypoint you want to go to
   new_coor->x = stateGetPositionEnu_i()->x + POS_BFP_OF_REAL(sinf(heading) * (distanceMeters));
   new_coor->y = stateGetPositionEnu_i()->y + POS_BFP_OF_REAL(cosf(heading) * (distanceMeters));
-//  VERBOSE_PRINT("Calculated %f m forward position. x: %f  y: %f based on pos(%f, %f) and heading(%f)\n", distanceMeters,
-//                POS_FLOAT_OF_BFP(new_coor->x), POS_FLOAT_OF_BFP(new_coor->y),
-//                stateGetPositionEnu_f()->x, stateGetPositionEnu_f()->y, DegOfRad(heading));
   return false;
 }
 
@@ -306,8 +272,6 @@ uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters)
  */
 uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor)
 {
-//  VERBOSE_PRINT("Moving waypoint %d to x:%f y:%f\n", waypoint, POS_FLOAT_OF_BFP(new_coor->x),
-//                POS_FLOAT_OF_BFP(new_coor->y));
   waypoint_move_xy_i(waypoint, new_coor->x, new_coor->y);
   return false;
 }

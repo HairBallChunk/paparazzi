@@ -37,7 +37,6 @@ extern uint16_t STEP;
 extern uint8_t filter_height_cut;
 extern uint8_t thresh_lower;
 extern uint8_t sections;
-extern float window_scale;
 extern float weight_green_input;
 extern float weight_grad_input;
 extern uint8_t print_weights;
@@ -46,7 +45,7 @@ extern float bin_threshold;
 extern int min_sections_failsafe;
 extern int Failsafe_increment_int;
 extern float min_green_thre;
-
+extern uint8_t double_gradient_bool;
 
 // Module functions
 extern void burhan_filter_init(void);
