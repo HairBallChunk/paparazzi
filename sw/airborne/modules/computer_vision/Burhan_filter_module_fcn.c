@@ -62,8 +62,9 @@ uint8_t failsafe_obstacle = 0;
 float bin_threshold = 0.5f;
 int min_sections_failsafe = 5;
 int Failsafe_increment_int = 4;
-float sum_left = 0, sum_right = 0;
+float sum_left = 0, sum_right = 0, sum_total = 0;
 uint8_t close_pole = 0;
+float min_green_thre = 0.3;
 
 struct communicate_msg{
     uint32_t section_idx;
@@ -142,8 +143,8 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     float d_gradients[sections - 4];
     float weighted_sum[sections - 2];
     uint16_t idx_section = 0, section_count = 0;
-    uint16_t section_value = 0, storage_value = 0, max_idx = (sections-1)/2;
-
+    uint16_t section_value = 0, storage_value = 0, max_idx =(int) (sections-1)/2, max_idx_green =(int) (sections-1)/2;
+    Section_value[max_idx] = 0;
 
     section_value = (int) img->h / STEP / sections; // This is the number of STEPS in a section.
 
@@ -169,11 +170,9 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
                 yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
             }
             //Transpose YUV in RGB
-
             pixel_b = (int) fmin(255.f, 1.164f * (*yp - 16) + 2.018f * (*up - 128));
             pixel_g = (int) fmin(255.f, 1.164f * (*yp - 16) - 0.813f * (*vp - 128) - 0.391f * (*up - 128));
             pixel_r = (int) fmin(255.f, 1.164f * (*yp - 16) + 1.596f * (*vp - 128));
-
             //CREATE THE BITWISE_AND TOGETHER WITH THE INRANGE FCN
             if ((pixel_b >= B_green_low) && (pixel_b <= B_green_hi) &&
                 (pixel_g >= G_green_low) && (pixel_g <= G_green_hi) &&
@@ -240,8 +239,8 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 																														   // to the range 0.0 --> 1.0
 			storage_value = 0; // reset counts
 			section_count = 0;
-			if (Section_value[idx_section] > Section_value[max_idx]) {
-				max_idx = idx_section; //find section with most green pixels
+			if (Section_value[idx_section] > Section_value[max_idx_green]) {
+				max_idx_green = idx_section; //find section with most green pixels
 			}
 			idx_section++;
 		}
@@ -353,6 +352,9 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 //	float sum_total;
     sum_left = 0;
     sum_right = 0;
+    sum_total = 0;
+    close_pole = 0;
+    failsafe_obstacle = 0;
 
 	for (int r = center - min_sections_failsafe; r < center + min_sections_failsafe + 1; r++ ){
 		if (r < center){
@@ -364,20 +366,17 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 //		sum_total += Section_value[r]; // calculating the total of these pixels but not using it. Leaving it there in case it is needed
 	}
 
-    close_pole = 0;
-    failsafe_obstacle = 0;
-	if (sum_left < (float) bin_threshold*sum_right){
+
+	if (sum_left < (float) bin_threshold*sum_right && Section_value[max_idx_green] > min_green_thre){
 		max_idx = center + Failsafe_increment_int;
 		close_pole = 1;
         failsafe_obstacle = 1;
 	}
-	else if (sum_right < (float) bin_threshold*sum_left){
+	else if (sum_right < (float) bin_threshold*sum_left && Section_value[max_idx_green] > min_green_thre){
 		max_idx = center - Failsafe_increment_int;
 		close_pole = 1;
         failsafe_obstacle = 1;
     }
-
-//    failsafe_obstacle =(int) close_pole;
 
 
 

@@ -162,7 +162,6 @@ void mav_exercise_periodic(void)
   Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
 
   float moveDistance = fminf(maxDistance, 0.2f * obstacle_free_confidence);
-
   float N_bins = (float) sections; //n_bins
   float n_offset = Section_max_idx * 1.f; // px_offset cast to float;
   float fov_h_heading_calc = 80.0f * 3.14f / 180.0f; // estimated horizontal field of view in rad;
@@ -173,8 +172,7 @@ void mav_exercise_periodic(void)
   switch (navigation_state) {
       case SAFE:
 
-          d_heading = (2 * n_offset - N_bins - 1) / (N_bins + 1) * fov_h_heading_calc /
-                      2; // convert the bin idx to a heading in rad
+          d_heading = (2 * n_offset - N_bins - 1) / (N_bins + 1) * fov_h_heading_calc/2; // convert the bin idx to a heading in rad
           // Move waypoint forward
           moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
           if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
@@ -188,7 +186,6 @@ void mav_exercise_periodic(void)
               increase_nav_heading(d_heading_deg);
               PRINT("SAFE->ELSE: n_offset/d_heading = %f/%i[deg]\n", n_offset, d_heading_deg);
           }
-
           break;
 
       case OBSTACLE_FOUND:
@@ -199,11 +196,7 @@ void mav_exercise_periodic(void)
           //Just adjust your heading
           if (failsafe_obstacle_bool) {
               d_heading = (2 * n_offset - N_bins - 1) / (N_bins + 1) * fov_h_heading_calc / 2;
-              moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
-          } else {
-              moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
           }
-
 
           count_obstacle_found++;
 
@@ -217,10 +210,9 @@ void mav_exercise_periodic(void)
           if (failsafe_obstacle_bool) {
               d_heading_deg = (int) (d_heading * 180. / 3.14);
               increase_nav_heading(d_heading_deg);
-              moveWaypointForward(WP_GOAL, moveDistance);
-          } else {
-              moveWaypointForward(WP_GOAL, moveDistance);
           }
+
+          moveWaypointForward(WP_GOAL, moveDistance);
 
 //      }
 

@@ -45,6 +45,7 @@ extern uint8_t draw_on_img;
 extern float bin_threshold;
 extern int min_sections_failsafe;
 extern int Failsafe_increment_int;
+extern float min_green_thre;
 
 
 // Module functions
