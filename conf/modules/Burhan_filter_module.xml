@@ -10,12 +10,12 @@
   <settings>
     <dl_settings>
       <dl_settings name="Burhan_filter_settings">
-        <dl_setting var="R_green_low" min="0" step="1" max="255" shortname="R_green_low"/>
-        <dl_setting var="R_green_hi" min="0" step="1" max="255" shortname="R_green_hi"/>
-        <dl_setting var="G_green_low" min="0" step="1" max="255" shortname="G_green_low"/>
-        <dl_setting var="G_green_hi" min="0" step="1" max="255" shortname="G_green_hi"/>
-        <dl_setting var="B_green_low" min="0" step="1" max="255" shortname="B_green_low"/>
-        <dl_setting var="B_green_hi" min="0" step="1" max="255" shortname="B_green_hi"/>
+        <dl_setting var="H_low" min="0" step="1" max="255" shortname="H_low"/>
+        <dl_setting var="H_hi" min="0" step="1" max="255" shortname="H_hi"/>
+        <dl_setting var="S_low" min="0" step="1" max="255" shortname="S_low"/>
+        <dl_setting var="S_hi" min="0" step="1" max="255" shortname="S_hi"/>
+        <dl_setting var="V_low" min="0" step="1" max="255" shortname="V_low"/>
+        <dl_setting var="V_hi" min="0" step="1" max="255" shortname="V_hi"/>
         <dl_setting var="gray_threshold" min="0" step=".5" max="100" shortname="gray_filt_thre"/>
         <dl_setting var="STEP" min="1" step="1" max="100" shortname="filter_STEP"/>
         <dl_setting var="filter_height_cut" min="0" step="1" max="240" shortname="filter_cut"/>

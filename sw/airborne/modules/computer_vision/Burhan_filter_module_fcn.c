@@ -40,14 +40,14 @@
 static pthread_mutex_t mutex;
 
 #ifndef BURHAN_FILTER_FPS1
-#define BURHAN_FILTER_FPS1 10 ///< Default FPS (zero means run at camera fps)
+#define BURHAN_FILTER_FPS1 0 ///< Default FPS (zero means run at camera fps)
 #endif
 
 //Burhan filter settings: KEEP THEM!!!
-uint8_t R_green_low = 60, G_green_low = 70, B_green_low = 0; // Lower = [65,20,5]
-uint8_t R_green_hi = 100, G_green_hi = 200, B_green_hi = 45; // Higher = [95,255,95]
-uint8_t H_low = 70, S_low = 20, V_low = 20;
-uint8_t H_hi = 130, S_hi = 99, V_hi = 99;
+//uint8_t R_green_low = 60, G_green_low = 70, B_green_low = 0; // Lower = [65,20,5]
+//uint8_t R_green_hi = 100, G_green_hi = 200, B_green_hi = 45; // Higher = [95,255,95]
+uint16_t H_low = 70, S_low = 80, V_low = 30;
+uint16_t H_hi = 130, S_hi = 100, V_hi = 55;
 uint8_t gray_threshold = 20;
 uint16_t STEP = 20;
 uint8_t filter_height_cut = 120;
@@ -85,10 +85,8 @@ struct vision_msg{
 struct communicate_msg global_msg[1];
 
 void Burhan_filter(struct image_t *img, uint8_t draw_on_img,
-                   uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
-                   uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi,
-				   uint8_t H_low, uint8_t S_low, uint8_t V_low,
-				   uint8_t H_hi, uint8_t S_hi, uint8_t V_hi,uint8_t gray_threshold,
+                   uint16_t H_low, uint16_t S_low, uint16_t V_low,
+                   uint16_t H_hi, uint16_t S_hi, uint16_t V_hi, uint8_t gray_threshold,
                    uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections,
                    uint8_t print_weights,float weight_green, float weight_grad, struct vision_msg *vision_msg_in);
 
@@ -97,8 +95,7 @@ struct image_t *Burhan_fcn(struct image_t *img)
 {
   struct vision_msg vision_in;
   //Using the Burhan filter
-  Burhan_filter(img, draw_on_img, R_green_low, G_green_low, B_green_low,
-                  R_green_hi, G_green_hi, B_green_hi, H_low, S_low, V_low, H_hi, S_hi, V_hi,
+  Burhan_filter(img, draw_on_img, H_low, S_low, V_low, H_hi, S_hi, V_hi,
 				  gray_threshold, thresh_lower, filter_height_cut, sections,
                   print_weights, weight_green_input, weight_grad_input, &vision_in);
 
@@ -115,11 +112,12 @@ struct image_t *Burhan_fcn(struct image_t *img)
 
 // Struct to store HSV pixel values
 struct hsv{
-	uint8_t H;
-	uint8_t S;
-	uint8_t V;
+	uint16_t H;
+	uint16_t S;
+	uint16_t V;
 };
 
+void RGB2HSV(int r,int g,int b, struct hsv *hsv_in);
 //Function to convert RGB to HSV
 void RGB2HSV(int r,int g,int b, struct hsv *hsv_in){
 
@@ -132,9 +130,9 @@ void RGB2HSV(int r,int g,int b, struct hsv *hsv_in){
 
 	float h_calc,s_calc,v_calc;
 
-	r_norm = (float)r/255.f;
-	g_norm = (float)g/255.f;
-	b_norm = (float)b/255.f;
+	r_norm = (float) r/255.f;
+	g_norm = (float) g/255.f;
+	b_norm = (float) b/255.f;
 
 	cmax = fmax(r_norm,fmax(g_norm,b_norm));
 	cmin = fmin(r_norm,fmin(g_norm,b_norm));
@@ -161,18 +159,15 @@ void RGB2HSV(int r,int g,int b, struct hsv *hsv_in){
 
 	v_calc = cmax*100;
 
-	uint8_t *h_ptr;
+	uint16_t *h_ptr, *s_ptr, *v_ptr;
 	h_ptr = &hsv_in->H;
-	*h_ptr = (uint8_t)h_calc;
+	*h_ptr = (int) h_calc;
 
-	uint8_t *s_ptr;
 	s_ptr = &hsv_in->S;
-	*s_ptr = (uint8_t)s_calc;
+	*s_ptr = (int) s_calc;
 
-	uint8_t *v_ptr;
 	v_ptr = &hsv_in->V;
-	*v_ptr = (uint8_t)v_calc;
-
+	*v_ptr = (int) v_calc;
 }
 
 struct image_t *burhan_filter1(struct image_t *img);
@@ -211,10 +206,8 @@ void burhan_filter_periodic(void)
 }
 
 void Burhan_filter(struct image_t *img, uint8_t draw,
-                   uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
-                   uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi,
-				   uint8_t H_low, uint8_t S_low, uint8_t V_low,
-				   uint8_t H_hi, uint8_t S_hi, uint8_t V_hi,
+				   uint16_t H_low, uint16_t S_low, uint16_t V_low,
+				   uint16_t H_hi, uint16_t S_hi, uint16_t V_hi,
                    uint8_t gray_threshold, uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections,
                    uint8_t print_weights, float weight_green, float weight_grad, struct vision_msg *vision_msg_in) {
 
@@ -236,7 +229,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 
     for (uint16_t y = 0; y < img->h; y += STEP) {
         uint8_t cnt = 0;
-        for (uint16_t x = 0; x < img->w; x++) {
+        for (uint16_t x = 0 ; x < filter_height_cut; x++) {
             // Check if the color is inside the specified values
             uint8_t *yp, *up, *vp;
             uint8_t pixel_b, pixel_g, pixel_r, pixel_value_local_gray;

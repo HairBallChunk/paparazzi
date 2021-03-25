@@ -30,8 +30,9 @@
 #include <stdbool.h>
 
 //Burhan filter settings
-extern uint8_t R_green_low, G_green_low, B_green_low;
-extern uint8_t R_green_hi, G_green_hi, B_green_hi;
+extern uint16_t H_low, H_hi;
+extern uint16_t S_low, S_hi;
+extern uint16_t V_low, V_hi;
 extern uint8_t gray_threshold;
 extern uint16_t STEP;
 extern uint8_t filter_height_cut;
