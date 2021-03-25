@@ -46,8 +46,8 @@ static pthread_mutex_t mutex;
 //Burhan filter settings: KEEP THEM!!!
 uint8_t R_green_low = 60, G_green_low = 70, B_green_low = 0; // Lower = [65,20,5]
 uint8_t R_green_hi = 100, G_green_hi = 200, B_green_hi = 45; // Higher = [95,255,95]
-uint8_t H_low = 90, S_low = 20, V_low = 20;
-uint8_t H_hi = 120, S_hi = 80, V_hi = 80;
+uint8_t H_low = 70, S_low = 20, V_low = 20;
+uint8_t H_hi = 130, S_hi = 99, V_hi = 99;
 uint8_t gray_threshold = 20;
 uint16_t STEP = 20;
 uint8_t filter_height_cut = 120;
@@ -163,15 +163,15 @@ void RGB2HSV(int r,int g,int b, struct hsv *hsv_in){
 
 	uint8_t *h_ptr;
 	h_ptr = &hsv_in->H;
-	*h_ptr = (int)h_calc;
+	*h_ptr = (uint8_t)h_calc;
 
 	uint8_t *s_ptr;
 	s_ptr = &hsv_in->S;
-	*s_ptr = (int)s_calc;
+	*s_ptr = (uint8_t)s_calc;
 
 	uint8_t *v_ptr;
 	v_ptr = &hsv_in->V;
-	*v_ptr = (int)v_calc;
+	*v_ptr = (uint8_t)v_calc;
 
 }
 
