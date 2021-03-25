@@ -86,7 +86,9 @@ struct communicate_msg global_msg[1];
 
 void Burhan_filter(struct image_t *img, uint8_t draw_on_img,
                    uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
-                   uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi, uint8_t gray_threshold,
+                   uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi,
+				   uint8_t H_low, uint8_t S_low, uint8_t V_low,
+				   uint8_t H_hi, uint8_t S_hi, uint8_t V_hi,uint8_t gray_threshold,
                    uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections,
                    uint8_t print_weights,float weight_green, float weight_grad, struct vision_msg *vision_msg_in);
 
@@ -96,7 +98,8 @@ struct image_t *Burhan_fcn(struct image_t *img)
   struct vision_msg vision_in;
   //Using the Burhan filter
   Burhan_filter(img, draw_on_img, R_green_low, G_green_low, B_green_low,
-                  R_green_hi, G_green_hi, B_green_hi, gray_threshold, thresh_lower, filter_height_cut, sections,
+                  R_green_hi, G_green_hi, B_green_hi, H_low, S_low, V_low, H_hi, S_hi, V_hi,
+				  gray_threshold, thresh_lower, filter_height_cut, sections,
                   print_weights, weight_green_input, weight_grad_input, &vision_in);
 
   pthread_mutex_lock(&mutex);
@@ -119,6 +122,10 @@ struct hsv{
 
 //Function to convert RGB to HSV
 void RGB2HSV(int r,int g,int b, struct hsv *hsv_in){
+
+	/// This function takes in RGB values in the range (0..255) for each channel
+
+	/// Outputs: H (0 to 360), S (0 to 100), V(0 to 100)
 
 	float cmax,cmin,diff;
 	float r_norm,g_norm,b_norm;
@@ -206,6 +213,8 @@ void burhan_filter_periodic(void)
 void Burhan_filter(struct image_t *img, uint8_t draw,
                    uint8_t R_green_low, uint8_t G_green_low, uint8_t B_green_low,
                    uint8_t R_green_hi, uint8_t G_green_hi, uint8_t B_green_hi,
+				   uint8_t H_low, uint8_t S_low, uint8_t V_low,
+				   uint8_t H_hi, uint8_t S_hi, uint8_t V_hi,
                    uint8_t gray_threshold, uint8_t thresh_lower, uint8_t filter_height_cut, uint8_t sections,
                    uint8_t print_weights, float weight_green, float weight_grad, struct vision_msg *vision_msg_in) {
 
@@ -259,9 +268,9 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
             pixel_v = HSV.V;
 
             //CREATE THE BITWISE_AND TOGETHER WITH THE INRANGE FCN
-            if ((pixel_b >= B_green_low) && (pixel_b <= B_green_hi) &&
-                (pixel_g >= G_green_low) && (pixel_g <= G_green_hi) &&
-                (pixel_r >= R_green_low) && (pixel_r <= R_green_hi)) {
+//            if ((pixel_b >= B_green_low) && (pixel_b <= B_green_hi) &&
+//                (pixel_g >= G_green_low) && (pixel_g <= G_green_hi) &&
+//                (pixel_r >= R_green_low) && (pixel_r <= R_green_hi)) {
 
               //Keep the YUV in case the RGB doen't work properly
 //          if ( (*up >= 0) && (*up <= 120) &&
@@ -269,9 +278,9 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 //               (*yp >= 50 ) && (*yp <= 200 )) {
 
             // Use this if condition when switched over to HSV filter
-//			if ((pixel_h >= H_low) && (pixel_h <= H_hi) &&
-//				(pixel_s >= S_low) && (pixel_s <= S_hi) &&
-//				(pixel_v >= V_low) && (pixel_v <= V_hi)) {
+			if ((pixel_h >= H_low) && (pixel_h <= H_hi) &&
+				(pixel_s >= S_low) && (pixel_s <= S_hi) &&
+				(pixel_v >= V_low) && (pixel_v <= V_hi)) {
 
                 //IMPLEMENTING THE BGR TO GRAYSCALE
                 pixel_value_local_gray = (int) 0.3f * pixel_r + 0.59f * pixel_g + 0.11f * pixel_b;
