@@ -108,6 +108,64 @@ struct image_t *Burhan_fcn(struct image_t *img)
   return img;
 }
 
+// Struct to store HSV pixel values
+struct hsv{
+	uint8_t H;
+	uint8_t S;
+	uint8_t V;
+};
+
+//Function to convert RGB to HSV
+void RGB2HSV(int r,int g,int b, struct hsv *hsv_in){
+
+	float cmax,cmin,diff;
+	float r_norm,g_norm,b_norm;
+
+	float h_calc,s_calc,v_calc;
+
+	r_norm = (float)r/255.f;
+	g_norm = (float)g/255.f;
+	b_norm = (float)b/255.f;
+
+	cmax = fmax(r_norm,fmax(g_norm,b_norm));
+	cmin = fmin(r_norm,fmin(g_norm,b_norm));
+	diff = cmax - cmin;
+
+	if (cmax == cmin){
+		h_calc = 0.f;
+	}
+	else if (cmax == r_norm){
+		h_calc = fmod(((60*((g_norm - b_norm)/diff)) + 360), 360.0);
+	}
+	else if (cmax == g_norm){
+		h_calc = fmod(((60*((b_norm - r_norm)/diff)) + 120), 360.0);
+	}
+	else if (cmax == b_norm){
+		h_calc = fmod(((60*((r_norm - g_norm)/diff)) + 240), 360.0);
+	}
+
+	if (cmax == 0){
+		s_calc = 0.0;
+	}else{
+		s_calc = (diff/cmax)*100;
+	}
+
+	v_calc = cmax*100;
+
+	uint32_t *h_ptr;
+	h_ptr = &hsv_in->H;
+	*h_ptr = (int)h_calc;
+
+	uint32_t *s_ptr;
+	s_ptr = &hsv_in->S;
+	*s_ptr = (int)s_calc;
+
+	uint32_t *v_ptr;
+	v_ptr = &hsv_in->V;
+	*v_ptr = (int)v_calc;
+
+}
+
 struct image_t *burhan_filter1(struct image_t *img);
 struct image_t *burhan_filter1(struct image_t *img)
 {
@@ -162,12 +220,17 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     float d_gradients[sections - 4];
     float gradients[sections - 2];
 
+    // Struct to store HSV values
+    struct hsv HSV;
+
     for (uint16_t y = 0; y < img->h; y += STEP) {
         uint8_t cnt = 0;
         for (uint16_t x = 0; x < img->w; x++) {
             // Check if the color is inside the specified values
             uint8_t *yp, *up, *vp;
             uint8_t pixel_b, pixel_g, pixel_r, pixel_value_local_gray;
+            uint8_t pixel_h, pixel_s, pixel_v;
+
             if (x % 2 == 0) {
                 // Even x
                 up = &buffer[y * 2 * img->w + 2 * x];      // U
@@ -185,6 +248,14 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
             pixel_b = (int) fmin(255.f, 1.164f * (*yp - 16) + 2.018f * (*up - 128));
             pixel_g = (int) fmin(255.f, 1.164f * (*yp - 16) - 0.813f * (*vp - 128) - 0.391f * (*up - 128));
             pixel_r = (int) fmin(255.f, 1.164f * (*yp - 16) + 1.596f * (*vp - 128));
+
+
+            RGB2HSV(pixel_r, pixel_g, pixel_b, &HSV);
+
+            pixel_h = HSV.H;
+            pixel_s = HSV.S;
+            pixel_v = HSV.V;
+
             //CREATE THE BITWISE_AND TOGETHER WITH THE INRANGE FCN
             if ((pixel_b >= B_green_low) && (pixel_b <= B_green_hi) &&
                 (pixel_g >= G_green_low) && (pixel_g <= G_green_hi) &&
@@ -194,6 +265,11 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
 //            if ( (*up >= 0) && (*up <= 120) &&
 //                 (*vp >= 0 ) && (*vp <= 120 ) &&
 //                 (*yp >= 50 ) && (*yp <= 200 )) {
+
+            // Use this if condition when switched over to HSV filter
+//			if ((pixel_h >= H_green_low) && (pixel_h <= H_green_hi) &&
+//				(pixel_s >= S_green_low) && (pixel_s <= S_green_hi) &&
+//				(pixel_v >= V_green_low) && (pixel_v <= V_green_hi)) {
 
                 //IMPLEMENTING THE BGR TO GRAYSCALE
                 pixel_value_local_gray = (int) 0.3f * pixel_r + 0.59f * pixel_g + 0.11f * pixel_b;
