@@ -161,15 +161,15 @@ void RGB2HSV(int r,int g,int b, struct hsv *hsv_in){
 
 	v_calc = cmax*100;
 
-	uint32_t *h_ptr;
+	uint8_t *h_ptr;
 	h_ptr = &hsv_in->H;
 	*h_ptr = (int)h_calc;
 
-	uint32_t *s_ptr;
+	uint8_t *s_ptr;
 	s_ptr = &hsv_in->S;
 	*s_ptr = (int)s_calc;
 
-	uint32_t *v_ptr;
+	uint8_t *v_ptr;
 	v_ptr = &hsv_in->V;
 	*v_ptr = (int)v_calc;
 
