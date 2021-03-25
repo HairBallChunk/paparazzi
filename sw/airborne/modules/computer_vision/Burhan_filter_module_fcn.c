@@ -249,7 +249,7 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
             pixel_g = (int) fmin(255.f, 1.164f * (*yp - 16) - 0.813f * (*vp - 128) - 0.391f * (*up - 128));
             pixel_r = (int) fmin(255.f, 1.164f * (*yp - 16) + 1.596f * (*vp - 128));
 
-
+            /// Convert the RGB pixel values ints HSV pixel values
             RGB2HSV(pixel_r, pixel_g, pixel_b, &HSV);
 
             pixel_h = HSV.H;
