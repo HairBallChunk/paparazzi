@@ -46,6 +46,8 @@ static pthread_mutex_t mutex;
 //Burhan filter settings: KEEP THEM!!!
 uint8_t R_green_low = 60, G_green_low = 70, B_green_low = 0; // Lower = [65,20,5]
 uint8_t R_green_hi = 100, G_green_hi = 200, B_green_hi = 45; // Higher = [95,255,95]
+uint8_t H_low = 90, S_low = 20, V_low = 20;
+uint8_t H_hi = 120, S_hi = 80, V_hi = 80;
 uint8_t gray_threshold = 20;
 uint16_t STEP = 20;
 uint8_t filter_height_cut = 120;
@@ -262,14 +264,14 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
                 (pixel_r >= R_green_low) && (pixel_r <= R_green_hi)) {
 
               //Keep the YUV in case the RGB doen't work properly
-//            if ( (*up >= 0) && (*up <= 120) &&
-//                 (*vp >= 0 ) && (*vp <= 120 ) &&
-//                 (*yp >= 50 ) && (*yp <= 200 )) {
+//          if ( (*up >= 0) && (*up <= 120) &&
+//               (*vp >= 0 ) && (*vp <= 120 ) &&
+//               (*yp >= 50 ) && (*yp <= 200 )) {
 
             // Use this if condition when switched over to HSV filter
-//			if ((pixel_h >= H_green_low) && (pixel_h <= H_green_hi) &&
-//				(pixel_s >= S_green_low) && (pixel_s <= S_green_hi) &&
-//				(pixel_v >= V_green_low) && (pixel_v <= V_green_hi)) {
+//			if ((pixel_h >= H_low) && (pixel_h <= H_hi) &&
+//				(pixel_s >= S_low) && (pixel_s <= S_hi) &&
+//				(pixel_v >= V_low) && (pixel_v <= V_hi)) {
 
                 //IMPLEMENTING THE BGR TO GRAYSCALE
                 pixel_value_local_gray = (int) 0.3f * pixel_r + 0.59f * pixel_g + 0.11f * pixel_b;
