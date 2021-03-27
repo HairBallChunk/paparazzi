@@ -212,7 +212,6 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
                    uint8_t print_weights, float weight_green, float weight_grad, struct vision_msg *vision_msg_in) {
 
     uint16_t ones_count = 0;
-    uint16_t wrong_zeros = 0;
     uint8_t *buffer = img->buf;
     uint16_t bin_array[img->w];
     float Section_value[sections];
@@ -228,7 +227,6 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
     struct hsv HSV;
 
     for (uint16_t y = 0; y < img->h; y += STEP) {
-        uint8_t cnt = 0;
         for (uint16_t x = 0 ; x < filter_height_cut; x++) {
             // Check if the color is inside the specified values
             uint8_t *yp, *up, *vp;
@@ -282,10 +280,9 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
             }
             //IMPLEMENTING THE THRESHOLD FCN
             if (pixel_value_local_gray >= gray_threshold) {
-                cnt++; //count the green pixels above the gray threshold
                 bin_array[x] = 1;
                 if (draw) {
-                    *yp = 255; // make pixel brighter in image
+                    *yp = 0; // make pixel brighter in image
                 }
             } else {
                 bin_array[x] = 0;
@@ -293,7 +290,6 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
         }
 
         // FIND CONTINUOUS ZEROS FUNCTION
-        wrong_zeros = 0;
         ones_count = 0;
         int count2;
         for (int k = filter_height_cut; k < img->w; k++) {
@@ -301,7 +297,6 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
             count2 = img->w - k;
             if (bin_array[count2] == 0) {
                 if (ones_count >= thresh_lower) {
-                    wrong_zeros++;
                     //Write the pixel to image
                     if (draw) {
                         if (count2 % 2 == 0) {
@@ -313,13 +308,16 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
                         }
                         *yp = 255;
                     }
+                    ones_count = count2;
+//                    fprintf(stderr,"I AM INTO THE LOOP, k is equal to = %d \n", count2);
+                    break;
                 }
             } else if (bin_array[count2] == 1) {
                 ones_count++;
             }
         }
         //REFINE THE FILTER INTO BIGGER CELLS
-        storage_value += wrong_zeros + cnt;
+        storage_value += ones_count;
         section_count++;
         if (section_count == section_value) {
             Section_value[idx_section] = (float) storage_value / ((float) (section_value * (img->w - filter_height_cut))); // Normalize the green count in section
