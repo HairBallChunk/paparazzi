@@ -55,7 +55,7 @@ int16_t filter_width;
 float divergence_value_exercise;  //divergence value needed for the obstacle avoidance algorithm
 int16_t obstacle_free_confidence;   // a measure of how certain we are that the way ahead is safe.
 float heading_increment = 15.f;//5.f;          // heading angle increment [deg]
-float maxDistance = 2.25;               // max waypoint displacement [m]
+float maxDistance = 1.2f;               // max waypoint displacement [m]
 
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 uint32_t Section_max_idx;
@@ -166,6 +166,7 @@ void mav_exercise_periodic(void)
               d_heading_deg = (int) (d_heading * 180. / 3.14);
               increase_nav_heading(d_heading_deg);
               PRINT("SAFE->ELSE: n_offset/d_heading = %f/%i[deg]\n", n_offset, d_heading_deg);
+              PRINT("SAFE->ELSE: Section_max_idx = %d \n", Section_max_idx);
           }
           break;
 
