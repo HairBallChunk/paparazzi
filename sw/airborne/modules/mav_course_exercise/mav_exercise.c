@@ -35,7 +35,7 @@ static uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
 static uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters);
 static uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor);
 static uint8_t increase_nav_heading(float incrementDegrees);
-static uint8_t chooseRandomIncrementAvoidance(void);
+//static uint8_t chooseRandomIncrementAvoidance(void);
 
 enum navigation_state_t {
   SAFE,
@@ -45,17 +45,17 @@ enum navigation_state_t {
 };
 
 // define settings
-float oa_color_count_frac = 0.18f;
+//float oa_color_count_frac = 0.18f;
 
 // define and initialise global variables
 enum navigation_state_t navigation_state = SAFE;
-int32_t color_count;                // orange color count from color filter for obstacle detection
-int16_t filter_height;
-int16_t filter_width;
-float divergence_value_exercise;  //divergence value needed for the obstacle avoidance algorithm
+//int32_t color_count;                // orange color count from color filter for obstacle detection
+//int16_t filter_height;
+//int16_t filter_width;
+//float divergence_value_exercise;  //divergence value needed for the obstacle avoidance algorithm
 int16_t obstacle_free_confidence;   // a measure of how certain we are that the way ahead is safe.
 float heading_increment = 15.f;//5.f;          // heading angle increment [deg]
-float maxDistance = 1.2f;               // max waypoint displacement [m]
+float maxDistance = 1.f;               // max waypoint displacement [m]
 
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 uint32_t Section_max_idx;
@@ -70,6 +70,7 @@ int count_avoidance = 4;
  * in different threads. The ABI event is triggered every time new data is sent out, and as such the function
  * defined in this file does not need to be explicitly called, only bound in the init function
  */
+/*
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
 #define ORANGE_AVOIDER_VISUAL_DETECTION_ID ABI_BROADCAST
 #endif
@@ -83,6 +84,7 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
   filter_height = pixel_height;
   filter_width = pixel_width;
 }
+*/
 uint8_t moveWaypoint_offset2waypoint(uint8_t waypoint, float distanceMeters, float d_heading);
 
 
@@ -108,11 +110,11 @@ static void burhan_filter_cb(uint8_t __attribute__((unused)) sender_id,
 void mav_exercise_init(void)
 {
   // Initialise random values
-  srand(time(NULL));
-  chooseRandomIncrementAvoidance();
+  //srand(time(NULL));
+  //chooseRandomIncrementAvoidance();
 
   // bind our colorfilter callbacks to receive the color filter outputs
-  AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
+  //AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
 //  AbiBindMsgOPTICAL_FLOW(FLOW_OPTICFLOW_ID, &optical_flow_ev, optical_flow_cb);
   AbiBindMsgBURHAN_FILTER(BURHAN_FILTER_ABI_ID, &burhan_filter_ev, burhan_filter_cb);
 }
@@ -128,12 +130,12 @@ void mav_exercise_periodic(void)
   }
 
   // compute current color thresholds
-  int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
+  //int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
 //  VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
 
   // update our safe confidence using color threshold
-  if(color_count < color_count_threshold){
+  if(!failsafe_obstacle_bool){
     obstacle_free_confidence++;
   } else {
     obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
@@ -158,15 +160,19 @@ void mav_exercise_periodic(void)
           moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
           if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
               navigation_state = OUT_OF_BOUNDS;
-          } else if (failsafe_obstacle_bool) {
+          } else if (obstacle_free_confidence == 0) {
               navigation_state = OBSTACLE_FOUND;
               count_obstacle_found = 0;
           } else {
               moveWaypointForward(WP_GOAL, moveDistance);
-              d_heading_deg = (int) (d_heading * 180. / 3.14);
-              increase_nav_heading(d_heading_deg);
-              PRINT("SAFE->ELSE: n_offset/d_heading = %f/%i[deg]\n", n_offset, d_heading_deg);
-              PRINT("SAFE->ELSE: Section_max_idx = %d \n", Section_max_idx);
+              if (Section_max_idx < 6 || Section_max_idx > 8)
+              {
+                d_heading_deg = (int) (d_heading * 180. / 3.14);
+                increase_nav_heading(d_heading_deg);
+                PRINT("SAFE->ELSE: n_offset/d_heading = %f/%i[deg]\n", n_offset, d_heading_deg);
+                PRINT("SAFE->ELSE: Section_max_idx = %d \n", Section_max_idx);
+                PRINT("SAFE->ELSE: obstacle_free_confidence = %d \n", obstacle_free_confidence);
+              }
           }
           break;
 
@@ -202,7 +208,7 @@ void mav_exercise_periodic(void)
       increase_nav_heading(heading_increment);
 
       // make sure we have a couple of good readings before declaring the way safe
-      if (!failsafe_obstacle_bool){
+      if (obstacle_free_confidence >= 2){
         navigation_state = SAFE;
       }
       break;
@@ -280,6 +286,7 @@ uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor)
 /*
  * Sets the variable 'heading_increment' randomly positive/negative
  */
+/*
 uint8_t chooseRandomIncrementAvoidance(void)
 {
   // Randomly choose CW or CCW avoiding direction
@@ -292,4 +299,4 @@ uint8_t chooseRandomIncrementAvoidance(void)
   }
   return false;
 }
-
+*/
