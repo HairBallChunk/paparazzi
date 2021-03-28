@@ -24,6 +24,7 @@
 // settings
 //extern float Heading_constant;
 extern int count_avoidance;
+extern float Max_heading_rate;
 
 extern void mav_exercise_init(void);
 extern void mav_exercise_periodic(void);

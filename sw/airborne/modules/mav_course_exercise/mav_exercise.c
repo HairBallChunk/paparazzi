@@ -63,6 +63,7 @@ float green_fraction_local;
 uint8_t failsafe_obstacle_bool;
 int count_obstacle_found = 0;
 int count_avoidance = 4;
+float Max_heading_rate = 10;
 /*
  * This next section defines an ABI messaging event (http://wiki.paparazziuav.org/wiki/ABI), necessary
  * any time data calculated in another module needs to be accessed. Including the file where this external
@@ -167,7 +168,8 @@ void mav_exercise_periodic(void)
               moveWaypointForward(WP_GOAL, moveDistance);
               if (Section_max_idx < 6 || Section_max_idx > 8)
               {
-                d_heading_deg = (int) (d_heading * 180. / 3.14);
+                d_heading_deg = (int) (d_heading * 180.f / 3.14f);
+                Bound( d_heading_deg, (int) - Max_heading_rate*.25f , (int) Max_heading_rate*.25f );
                 increase_nav_heading(d_heading_deg);
                 PRINT("SAFE->ELSE: n_offset/d_heading = %f/%i[deg]\n", n_offset, d_heading_deg);
                 PRINT("SAFE->ELSE: Section_max_idx = %d \n", Section_max_idx);
