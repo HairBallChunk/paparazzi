@@ -46,11 +46,15 @@ static pthread_mutex_t mutex;
 //Burhan filter settings: KEEP THEM!!!
 //uint8_t R_green_low = 60, G_green_low = 70, B_green_low = 0; // Lower = [65,20,5]
 //uint8_t R_green_hi = 100, G_green_hi = 200, B_green_hi = 45; // Higher = [95,255,95]
-//uint16_t H_low = 40, S_low = 45, V_low = 32;
-//uint16_t H_hi = 110, S_hi = 100, V_hi = 90;
-//OLD
-uint16_t H_low = 70, S_low = 80, V_low = 30;
-uint16_t H_hi = 130, S_hi = 100, V_hi = 55;
+
+//REAL LIFE
+uint16_t H_low = 40, S_low = 45, V_low = 32;
+uint16_t H_hi = 110, S_hi = 100, V_hi = 80;
+
+//SIMULATION
+//uint16_t H_low = 70, S_low = 80, V_low = 30;
+//uint16_t H_hi = 130, S_hi = 100, V_hi = 55;
+
 uint8_t gray_threshold = 20;
 uint16_t STEP = 20;
 uint8_t filter_height_cut = 150;
