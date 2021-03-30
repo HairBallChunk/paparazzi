@@ -63,7 +63,7 @@ float green_fraction_local;
 uint8_t failsafe_obstacle_bool;
 int count_obstacle_found = 0;
 int count_avoidance = 4;
-float Max_heading_rate = 10;
+float Max_heading_rate = 17;
 float desired_alt = 0.7;
 /*
  * This next section defines an ABI messaging event (http://wiki.paparazziuav.org/wiki/ABI), necessary
