@@ -11,6 +11,7 @@
       <dl_settings name="Navigation_module_parameters">
         <dl_setting var="count_avoidance" min="0" step="1" max="15" shortname="count_avoidance"/>
         <dl_setting var="Max_heading_rate" min="0" step=".5" max="25" shortname="Max_heading_rate_deg_s"/>
+        <dl_setting var="desired_alt" min="0" step=".1" max="5" shortname="desired_alt"/>
       </dl_settings>
     </dl_settings>
   </settings>

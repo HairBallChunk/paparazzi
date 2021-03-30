@@ -46,20 +46,20 @@ static pthread_mutex_t mutex;
 //Burhan filter settings: KEEP THEM!!!
 //uint8_t R_green_low = 60, G_green_low = 70, B_green_low = 0; // Lower = [65,20,5]
 //uint8_t R_green_hi = 100, G_green_hi = 200, B_green_hi = 45; // Higher = [95,255,95]
-uint16_t H_low = 40, S_low = 45, V_low = 32;
-uint16_t H_hi = 110, S_hi = 100, V_hi = 90;
+//uint16_t H_low = 40, S_low = 45, V_low = 32;
+//uint16_t H_hi = 110, S_hi = 100, V_hi = 90;
 //OLD
-//uint16_t H_low = 70, S_low = 80, V_low = 30;
-//uint16_t H_hi = 130, S_hi = 100, V_hi = 55;
+uint16_t H_low = 70, S_low = 80, V_low = 30;
+uint16_t H_hi = 130, S_hi = 100, V_hi = 55;
 uint8_t gray_threshold = 20;
 uint16_t STEP = 20;
-uint8_t filter_height_cut = 120;
-uint8_t thresh_lower = 3;
+uint8_t filter_height_cut = 150;
+uint8_t thresh_lower = 2;
 uint8_t sections = 13; //NOTICE, IT APPROXIMATE TO THE CLOSEST INTEGER!!!!!
 uint8_t print_weights = 0;
 uint8_t draw_on_img = 1;
-float weight_green_input = 0.5;
-float weight_grad_input = 0.5;
+float weight_green_input = 0.35;
+float weight_grad_input = 0.65;
 
 //OBSTACLE FAILSAFE PARAMETERS
 uint8_t failsafe_obstacle = 0;
@@ -295,9 +295,9 @@ void Burhan_filter(struct image_t *img, uint8_t draw,
         // FIND CONTINUOUS ZEROS FUNCTION
         ones_count = 0;
         int count2;
-        for (int k = filter_height_cut; k < img->w; k++) {
+        for (int k = 0; k < filter_height_cut; k++) {
             uint8_t *yp;
-            count2 = img->w - k;
+            count2 = filter_height_cut - k;
             if (bin_array[count2] == 0) {
                 if (ones_count >= thresh_lower) {
                     //Write the pixel to image

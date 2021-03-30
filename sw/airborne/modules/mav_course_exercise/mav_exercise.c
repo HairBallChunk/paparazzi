@@ -64,6 +64,7 @@ uint8_t failsafe_obstacle_bool;
 int count_obstacle_found = 0;
 int count_avoidance = 4;
 float Max_heading_rate = 10;
+float desired_alt = 0.7;
 /*
  * This next section defines an ABI messaging event (http://wiki.paparazziuav.org/wiki/ABI), necessary
  * any time data calculated in another module needs to be accessed. Including the file where this external
@@ -152,6 +153,9 @@ void mav_exercise_periodic(void)
   float d_heading = 0; //rad
   int d_heading_deg = 0; //deg
 //  float green_fraction_threshold = 0.2;
+
+    //Always set the altitude to the required one
+    waypoint_set_alt(WP_GOAL, desired_alt);
 
   switch (navigation_state) {
       case SAFE:
